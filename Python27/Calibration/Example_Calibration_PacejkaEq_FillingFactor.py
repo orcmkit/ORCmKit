@@ -16,7 +16,6 @@ Date: 02/21/2016
 from __future__ import division
 from math import pi, cos, sin, tan, sqrt, asin, acos, atan, fabs, log,exp
 from scipy import integrate
-from scipy.integrate import simps
 from scipy.optimize import leastsq, curve_fit, minimize
 from scipy.stats import chi2
 import numpy as np
@@ -74,18 +73,23 @@ class PacejkaFillingFactorClass():
         
         
     def Pacejka(self,data,a0,a1,a2,a3,a4,a5,a6,shape_0,dydx_0,x_0_0,x_m_0,y_m_0,N_exp_m):   #x_0_0,dydx_0,shape_0,x_m_0,y_m_0,N_exp_m):
+        """
+        data[0,:] : pressure ratio [-]
+        data[1,:] : expander rotational speed [rpm]
+        data[2,:] : expander inlet pressure [kPa]
+        """
         
-        x,y,p= data[0,:],data[1,:],data[2,:]
+        rp,Nexp,p= data[0,:],data[1,:],data[2,:]
         N_exp_star_m = (self.N_exp_m -3000)/3000    
         p_star = (p - 10)/10
-        y_star = (y - 3000) /3000
+        N_star = (Nexp - 3000) /3000
 
         
-        x_0=self.x_0_0 + a0*y        
-        dydx= dydx_0 + a1*p_star - a2*y_star
+        x_0=self.x_0_0 + a0*Nexp        
+        dydx= dydx_0 + a1*p_star - a2*N_star
         shape=shape_0
-        x_m=self.x_m_0 -  a3*p_star + a4*y_star
-        y_max=self.y_m_0 +a5*p_star -a6*(y_star - N_exp_star_m)**2
+        x_m=self.x_m_0 -  a3*p_star + a4*N_star
+        y_max=self.y_m_0 +a5*p_star -a6*(N_star - N_exp_star_m)**2
     
         "Equation of Pacejka"
         A = x_0
@@ -103,7 +107,7 @@ class PacejkaFillingFactorClass():
         """
         E = (B*(x_m-x_0)-tan(pi/(2*C)))/(B*(x_m-x_0)-np.arctan(B*(x_m-x_0)))
 
-        return D * np.sin(C * np.arctan(B*(x-A) - E * (B * (x-A) - np.arctan(B*(x-A)))))
+        return D * np.sin(C * np.arctan(B*(rp-A) - E * (B * (rp-A) - np.arctan(B*(rp-A)))))
 
     def Pacejka_residuals(self,params,y,data):
 
@@ -133,7 +137,7 @@ class PacejkaFillingFactorClass():
     
     def Calculate_etais(self):
         
-        #pressure and pressure ratio
+        #Assign experimental data
         p_su_exp = self.p_su_exp
         p_ex_exp = self.p_ex_exp
         T_su_exp = self.T_su_exp
@@ -141,14 +145,8 @@ class PacejkaFillingFactorClass():
         rho_su=PropsSI('D','T',T_su_exp+273.15,'P',p_su_exp,self.Ref)
         rho_ex=PropsSI('D','T',T_ex_exp+273.15,'P',p_ex_exp,self.Ref)
         rp_exp=p_su_exp/p_ex_exp
-
         eta_is_exp = self.eta_is_exp
-        
-        #Non-dimensional form of inputs values:"
         N_exp = self.N_exp
-        N_exp_star = (N_exp - 3000)/3000
-        p_star = (p_su_exp - 1000)/1000
-        rp_star = (rp_exp-6)/6
         FF_exp = self.FF_exp
 
         """
