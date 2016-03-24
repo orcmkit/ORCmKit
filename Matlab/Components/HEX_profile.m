@@ -1,4 +1,5 @@
 function out = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info)
+%change
 decim = 3;
 if strcmp(info.type_h,'H') && strcmp(info.type_c,'H')
     h_h_su = in_h_su;
