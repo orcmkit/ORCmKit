@@ -1,5 +1,5 @@
 function [out, TS] = DPModel_2(fluid, in_P, in_h, M_dot, T_amb, DP)
-%fluid, in_P, in_h, M_dot, T_amb, DP
+%fluid, in_P, in_h, M_dot, T_amb, DP ----
 %% DEMONSTRATION CASE
 if nargin == 0
     clear all
