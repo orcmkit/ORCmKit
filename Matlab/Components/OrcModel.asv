@@ -114,9 +114,6 @@ if nargin == 0
     
     param.displayTS = 1;
     param.displayResults =0;
-    
-    param.init = [ 3 3 3 3];
-    param.nbr_test = 5;
 end
 
 tstart_ORC = tic;
@@ -143,11 +140,11 @@ rp_min = min(1.01, rp_max);
 P_ev_lb = rp_min*P_cd_lb;
 P_cd_ub = P_ev_ub/rp_min;
 Q_dot_rec_lb = 0;
-P_cd_guess0 = linspace(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su, fluid_wf),CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su+30, fluid_wf),param.init(1) );
-x_rp_guess0 =  linspace(0.1, 0.9, param.init(2));
-x_Q_dot_rec_guess0 = linspace(0.1, 0.5, param.init(3));
+P_cd_guess0 = linspace(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su, fluid_wf),CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su+30, fluid_wf),param.init() );
+x_rp_guess0 =  linspace(0.1, 0.9, 4);
+x_Q_dot_rec_guess0 = linspace(0.1, 0.5, 4);
 if strcmp(param.solverType, 'M_imposed')
-    x_h_pp_su_guess0 = linspace(0.2, 0.8, param.init(4));
+    x_h_pp_su_guess0 = linspace(0.2, 0.8, 3);
     [res,P_cd_guess_vec, P_cd_lb_vec, P_cd_ub_vec, P_ev_guess_vec, P_ev_lb_vec, P_ev_ub_vec, Q_dot_rec_guess_vec, Q_dot_rec_lb_vec, Q_dot_rec_max_vec,h_pp_su_lb_vec,h_pp_su_guess_vec,h_pp_su_ub_vec] = deal(NaN*ones(1,length(P_cd_guess0)*length(x_rp_guess0)*length(x_Q_dot_rec_guess0)*length(x_h_pp_su_guess0)));
 elseif strcmp(param.solverType, 'DTsc_imposed')
     x_h_pp_su_guess0 = 1;
@@ -294,7 +291,7 @@ end
 res = res(not(isnan(res)));
 [res_ordered, j_order] = sort(res);
 Nbr_comb_x0 = length(j_order);
-Nbr_comb_x0_max = param.nbr_test;
+Nbr_comb_x0_max = 5;
 
 disp('x0 residuals and index:')
 fprintf('\n');

@@ -137,7 +137,7 @@ s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
 rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
 h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
 
-if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.01,fluid);
+if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.3,fluid);
     %If the external conditions are viable (i.e. pressure ratio higher than
     %1 and in two phase conditions), we proceed to the modeling:
              
