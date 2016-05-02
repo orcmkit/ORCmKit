@@ -1,8 +1,38 @@
 function Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, info)
+%% CODE DESCRIPTION
+% ORCmKit - an open-source modelling library for ORC systems
 
+% Remi Dickes - 27/04/2016 (University of Liege, Thermodynamics Laboratory)
+% rdickes @ulg.ac.be
+%
+% HEX_Qdotmax is a single matlab code aiming to calculate the maxium amount of
+% heat power that can be transferred between two fluids in a counterflow
+% heat exchanger. This maxium is either given by a pinch point of 0K between 
+% the temperature profiles, or limited by the maximum and minimum temperatures 
+% achievable by the fluids.
+% 
+% The model inputs are:
+%       - fluid_h: nature of the hot fluid                        	[-]
+%       - P_h_su: inlet pressure of the hot fluid                   [Pa]
+%       - in_h_su: inlet temperature or enthalpy of the hot fluid   [K or J/kg]
+%       - m_dot_h: mass flow rate of the hot fluid                  [kg/s]
+%       - fluid_c: nature of the cold fluid                        	[-]
+%       - P_c_su: inlet pressure of the cold fluid                  [Pa]
+%       - in_c_su: inlet temperature or enthalpy of the cold fluid  [K or J/kg]
+%       - m_dot_c: mass flow rate of the cold fluid                 [kg/s]
+%       - param: structure variable containing the model parameters i.e.
+%           *param.type_h = type of input for hot fluid ('H' for enthalpy,'T' for temperature)
+%           *param.type_c = type of input for cold fluid ('H' for enthalpy,'T' for temperature)
+%
+% The model outputs are:
+%       - Q_dot_max : the maximum amount of power that can be transferred.
+%          	
+% See the documentation for further details or contact rdickes@ulg.ac.be
+
+%% MODELLING CODE
 res_T = 1e-2;
 
-if strcmp(info.type_h,'H') && strcmp(info.type_c,'H') % OK
+if strcmp(info.type_h,'H') && strcmp(info.type_c,'H') % CASE 1 : HOT FLUID AND COLD FLUID MIGHT EXPERIENCE A PHASE CHANGE
     
     h_h_su = in_h_su;
     h_c_su = in_c_su;
@@ -12,7 +42,7 @@ if strcmp(info.type_h,'H') && strcmp(info.type_c,'H') % OK
     T_c_max = CoolProp.PropsSI('Tmax', 'P', P_c_su,'Q', 0, fluid_c)-0.5;  
     
     % Computation of Q_dot_hext_max
-    if isempty(strfind(fluid_h, 'INCOMP:'))
+    if isempty(strfind(fluid_h, 'INCOMP:')) 
         if T_c_su-T_h_min < res_T;
             h_h_ex_extmax = CoolProp.PropsSI('H', 'P', P_h_su,'T', T_h_min, fluid_h);
         elseif abs(T_c_su-CoolProp.PropsSI('T', 'P', P_h_su, 'Q', 0, fluid_h))<res_T;

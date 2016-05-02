@@ -1,5 +1,32 @@
 function out = HexSeries(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, in_hex1, in_hex2)
 
+%% CODE DESCRIPTION
+% ORCmKit - an open-source modelling library for ORC systems
+
+% Remi Dickes - 28/04/2016 (University of Liege, Thermodynamics Laboratory)
+% rdickes @ulg.ac.be
+%
+% HexSeries is a single matlab function used to evaluate the heat transfer 
+% occuring in two heat exchangers in series (see the Documentation/HexSeries_MatlabDoc)
+%
+% The model inputs are:
+%       - fluid_h: nature of the hot fluid                        	[-]
+%       - P_h_su: inlet pressure of the hot fluid                   [Pa]
+%       - in_h_su: inlet temperature or enthalpy of the hot fluid   [K or J/kg]
+%       - m_dot_h: mass flow rate of the hot fluid                  [kg/s]
+%       - fluid_c: nature of the cold fluid                        	[-]
+%       - P_c_su: inlet pressure of the cold fluid                  [Pa]
+%       - in_c_su: inlet temperature or enthalpy of the cold fluid  [K or J/kg]
+%       - m_dot_c: mass flow rate of the cold fluid                 [kg/s]
+%       - in_hex1: structure variable describing the first HEX (cfr HexModel.mat)
+%       - in_hex2: structure variable describing the second HEX (cfr HexModel.mat)
+%
+% The model outputs is:
+%       - out: a structure variable which includes all the modelling
+%       results of the two heat exchanger (see HexMode.mat)
+%
+% See the documentation for further details or contact rdickes@ulg.ac.be
+
 %% DEMONSTRATION CASE
 if nargin == 0
     fluid_h = 'R245fa';
@@ -22,11 +49,11 @@ if nargin == 0
     in_hex2.type_c = 'H';
     in_hex2.epsilon_th = 0.65;
     in_hex2.displayResults = 0;
-    in_hex2.displayTS = 0;
+    in_hex2.displayTS = 1;
     in_hex2.advancedUser = 1;
 end
 
-%% HEX computation
+%% MODELING OF 2 HEX IN SERIES 
 Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, in_hex1);
 lb = 0;
 ub = Q_dot_max;
@@ -41,6 +68,7 @@ end
 
 end
 
+%% NESTED FUNCTIONS
 function res = hexseries_res(x, fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, in_hex1, in_hex2)
 var = hexseries(x, fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, in_hex1, in_hex2);
 res = var.res;

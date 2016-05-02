@@ -3,11 +3,11 @@ function [out,TS] = PumpModel(P_su, h_su, P_ex, fluid, N_pp, param)
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 
-% Remi Dickes - 26/01/2015 (University of Liege, Thermodynamics Laboratory)
+% Remi Dickes - 27/04/2016 (University of Liege, Thermodynamics Laboratory)
 % rdickes @ulg.ac.be
 %
-% PumpModel is a single matlab code implementing three different modeling
-% approaches to simulate a volumetric pump (see the Documentation)
+% PumpModel is a single matlab code implementing three different modelling
+% approaches to simulate a volumetric pump (see the Documentation/PumpModel_MatlabDoc)
 %
 % The model inputs are:
 %       - P_su: inlet pressure of the WF                          	[Pa]
@@ -20,19 +20,22 @@ function [out,TS] = PumpModel(P_su, h_su, P_ex, fluid, N_pp, param)
 % The model paramters provided in 'param' depends of the type of model selected:
 %       - if param.modelType = 'CstEff':
 %           param.V_s , machine displacement volume                	[m3]
+%           param.V, volume of the pump                             [m^3]
 %           param.epsilon_is, isentropic efficiency                	[-]
 %           param.epsilon_vol, volumetric efficiency               	[-]
-%           param.displayResults, flag to display the results or not [1/0]
+%           param.displayResults, flag to display the results or not[1/0]
 %
 %       - if param.modelType = 'PolEff':
 %           param.V_s , machine displacement volume                	[m3]
+%           param.V, volume of the pump                             [m^3]
 %           param.N_pp_nom, pump nominal shaft speed              	[rpm]
 %           param.coeffPol_is, polynmial coef for epsilon_is        [-]
 %           param.coeffPol_vol, polynmial coef for epsilon_vol      [-]
-%           param.displayResults, flag to display the results or not [1/0]
+%           param.displayResults, flag to display the results or not[1/0]
 %
 %       - if param.modelType = 'SemiEmp':
 %           param.V_s , machine displacement volume               	[m3]
+%           param.V, volume of the pump                             [m^3]
 %           param.A_leak, leakage surface area                     	[m2]
 %           param.W_dot_loss, constant power losses                	[W]
 %           param.K_0_loss, term for the proportional losses       	[-]
@@ -46,45 +49,74 @@ function [out,TS] = PumpModel(P_su, h_su, P_ex, fluid, N_pp, param)
 %               - W_dot = mechanical power                       [W]
 %               - epsilon_is = isentropic efficiency             [-]
 %               - epsilon_vol = volumetric efficiency            [-]
+%               - M = mass of fluid inside the pump              [kg]
 %               - time = the code computational time             [sec]
 %               - flag = simulation flag                         [-1/1]
 %
+%       - TS : a stucture variable which contains the vectors of temperature
+%              and entropy of the fluid (useful to generate a Ts diagram 
+%              when modelling the entire ORC system 
 %
 % See the documentation for further details or contact rdickes@ulg.ac.be
 
 
 %% DEMONSTRATION CASE
-% Define a demonstration case if PumpModel is executed without
-% user-defined inputs
 
 if nargin == 0
+    
+    % Define a demonstration case if PumpModel.mat is not executed externally
     fluid = 'R245fa';               %Nature of the fluid
-    P_su = 4.0001e5;                %Supply pressure
-    P_ex = 3.6510e+06*0.99;         %Exhaust pressure
-    h_su = 2.6676e+05;              %Supply enthalpy
-    param.modelType = 'CstEff';     %Type of model
-    param.V_s = 1e-6;               %Machine swepts volume 
-    N_pp = 1500;                    %Rotational speed 
-    param.epsilon_is = 0.5;         %Cst isentropic efficiency
-    param.epsilon_vol = 0.8;        %Cst volumetric efficiencyh
-    param.displayResults = 1;       %Flag to control the resustl display
+    P_su = 4.0001e5;                %Supply pressure        [Pa]
+    P_ex = 3.6510e+06*0.99;         %Exhaust pressure       [Pa]
+    h_su = 2.6676e+05;              %Supply enthalpy        [J/kg]
+    N_pp = 1500;                    %Rotational speed       [rpm]
+    param.modelType = 'CstEff';     %Type of model          [CstEff, PolEff, SemiEmp]
+    param.displayResults = 1;       %Flag to control the resustl display [0/1]
+    
+    switch param.modelType
+        case 'CstEff'
+            param.V_s = 1e-6;               %Machine swepts volume  [m^3]
+            param.V =1.4e-3;                %Volume inside the pump
+            param.epsilon_is = 0.5;         %Cst isentropic efficiency [-]
+            param.epsilon_vol = 0.8;        %Cst volumetric efficiency [-]
+        case 'PolEff'
+            param.V_s = 1e-6;               %Machine swepts volume  [m^3]
+            param.V =1.4e-3;                %Volume inside the pump
+
+        case 'SemiEmp'
+            param.V_s = 1e-6;               %Machine swepts volume  [m^3]
+            param.V =1.4e-3;                %Volume inside the pump
+
+    end
 end
 
 tstart_pp = tic;                    %Start to evaluate the simulation time
 
 %% PUMP MODELING
-% Modeling section of the code
+% Modelling section of the code
 if not(isfield(param, 'displayResults'))
     param.displayResults = 0;
+    %if nothing specified by the user, the results are not displayed by
+    %default.
 end
+
+if not(isfield(param,'h_min'))
+    param.h_min =  CoolProp.PropsSI('H','P',5e4,'T',253.15,fluid);
+end
+if not(isfield(param,'h_max'))
+    param.h_max =  CoolProp.PropsSI('H','P',4e6,'T',500,fluid);
+end
+
+T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
+s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
+rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
+            
 if P_su < P_ex && N_pp > 0      
    %If the external conditions are viable, we proceed to the modeling
     
     switch param.modelType
+    %Select the proper model paradigm chosen by the user
         case 'CstEff'       
-            T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
-            s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
-            rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
             h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
             V_s = param.V_s;
             epsilon_is = param.epsilon_is;
@@ -92,11 +124,12 @@ if P_su < P_ex && N_pp > 0
             m_dot = N_pp/60*V_s*epsilon_vol*rho_su;
             W_dot = m_dot*(h_ex_s-h_su)/epsilon_is;
             h_ex = h_su+W_dot/m_dot;
-            T_ex = CoolProp.PropsSI('T','P',P_ex,'H',h_ex,fluid);
+            if h_ex > param.h_min && h_ex < param.h_max
+                out.flag = 1;
+            else
+                out.flag = -1;
+            end
         case 'PolEff'
-            T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
-            s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
-            rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
             h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
             V_s = param.V_s;
             N_pp_nom = param.N_pp_nom;
@@ -106,50 +139,57 @@ if P_su < P_ex && N_pp > 0
             epsilon_vol = max(0.01,min(a_vol(1) + a_vol(2)*(P_ex/P_su) + a_vol(3)*(N_pp/N_pp_nom) + a_vol(4)*(P_ex/P_su)^2 + a_vol(5)*(P_ex/P_su)*(N_pp/N_pp_nom) + a_vol(6)*(N_pp/N_pp_nom)^2,1));
             m_dot = N_pp/60*V_s*epsilon_vol*rho_su;
             W_dot = max(0,m_dot*(h_ex_s-h_su)/epsilon_is);
-            h_ex = h_su + W_dot/m_dot;
-            T_ex = CoolProp.PropsSI('T','P',P_ex,'H',h_ex,fluid);
+            h_ex = h_su+W_dot/m_dot;
+            if h_ex > param.h_min && h_ex < param.h_max
+                out.flag = 1;
+            else
+                out.flag = -1;
+            end
         case 'SemiEmp'
-            T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
-            s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
-            rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
             h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
             V_s = param.V_s;
             A_leak = param.A_leak;
             W_dot_loss = param.W_dot_0_loss;
             K_0_loss = param.K_0_loss;
-            m_dot = max(1e-20, (N_pp/60*V_s*rho_su)-(A_leak*sqrt(2*rho_su*(P_ex-P_su))));
+            m_dot = max(1e-3, (N_pp/60*V_s*rho_su)-(A_leak*sqrt(2*rho_su*(P_ex-P_su))));
             epsilon_vol = m_dot/(N_pp/60*V_s*rho_su);
             W_dot = W_dot_loss + K_0_loss*m_dot/rho_su*(P_ex-P_su);
             epsilon_is = (m_dot*(h_ex_s-h_su))/W_dot;
             h_ex = h_su+W_dot/m_dot;
-            T_ex = CoolProp.PropsSI('T','P',P_ex,'H',h_ex,fluid);
+            if h_ex > param.h_min && h_ex < param.h_max
+                out.flag = 1;
+            else
+                out.flag = -1;
+            end
         otherwise
             disp('Error: type of pump model not valid');
     end  
-    out.T_ex = T_ex;
+  
+else 
+    % If the external conditions are not viable, we fake a perfect machine 
+    % but we notice the user with a negative flag
+    out.flag = -2;
+end
+
+if out.flag > 0
     out.h_ex = h_ex;
+    out.T_ex = CoolProp.PropsSI('T','P',P_ex,'H',out.h_ex,fluid);
     out.m_dot = m_dot;
     out.W_dot = W_dot;
     out.epsilon_is = epsilon_is;
     out.epsilon_vol = epsilon_vol;
-    out.time = toc(tstart_pp);
-    out.flag = 1;
-else 
-    % If the external conditions are not viable, we fake a perfect machine 
-    % but we notice the user with a negative flag
-    T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
-    s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
-    rho_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
+    out.M = (CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
+else
     out.T_ex = T_su;
     out.h_ex = h_su;
-    out.m_dot =  N_pp/60*param.V_s*rho_su;
-    out.W_dot = 0;
-    out.epsilon_is = 0;
+    h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
+    out.m_dot = N_pp/60* param.V_s*rho_su;
+    out.W_dot = m_dot*(h_ex_s-h_su);
+    out.epsilon_is = 1;
     out.epsilon_vol = 1;
-    out.time = toc(tstart_pp);
-    out.flag = -1;
+    out.M =(CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
 end
-
+out.time = toc(tstart_pp);
 
 %% TS DIAGRAM and DISPLAY
 
@@ -157,7 +197,7 @@ end
 TS.T = [T_su out.T_ex];
 TS.s = [s_su CoolProp.PropsSI('S','H',out.h_ex,'P',P_ex,fluid)];
 
-% If the param.displayResults flag is activated, the results are shown on the
+% If the param.displayResults flag is activated (=1), the results are displayed on the
 % command window
 if param.displayResults ==1
     in.fluid = fluid;
