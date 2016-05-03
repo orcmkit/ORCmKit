@@ -338,7 +338,7 @@ if not(isempty(res_ordered))
         
         x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
         [out_ORC, TS_ORC] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
-        if not(any(out_ORC.res_vec > 1e-5)) && not(any(out_ORC.flag.value<0))
+        if all(out_ORC.res_vec < 1e-5) && all(out_ORC.flag.value>0)
             out_ORC.flag_ORC = 1;
             stop = 1;
         else
