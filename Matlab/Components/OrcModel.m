@@ -231,32 +231,40 @@ fprintf('\n');
 
 % 3) Guess intial conditions based on a single point
 if isfield(param, 'x0')
-    x0_vec = [1 1.2 0.6 1.4 0.7 1.3];
-    P_cd_guess_vec_x0 = param.x0(2)*x0_vec;
+    x0_vec = [1 1.1 0.9];
+    res_x0 = NaN*ones(1,length(x0_vec));
+    P_cd_guess_vec_x0 = max(P_cd_lb+1,min(param.x0(2)*x0_vec, P_cd_ub-1));
     P_cd_lb_vec_x0 = P_cd_lb*ones(1,length(x0_vec));
     P_cd_ub_vec_x0 = P_cd_ub*ones(1,length(x0_vec));
-    P_ev_guess_vec_x0 = param.x0(1)*x0_vec;
+    P_ev_guess_vec_x0 = max(P_ev_lb+1, min(param.x0(1)*x0_vec, P_ev_ub-1));
     P_ev_lb_vec_x0 = P_ev_lb*ones(1,length(x0_vec));
     P_ev_ub_vec_x0 = P_ev_ub*ones(1,length(x0_vec));
-    Q_dot_rec_guess_vec_x0 = param.x0(3)*x0_vec;
+    Q_dot_rec_guess_vec_x0 = max(Q_dot_rec_lb+1, min(param.x0(3)*x0_vec, Q_dot_rec_ub-1)); 
     Q_dot_rec_lb_vec_x0 = Q_dot_rec_lb*ones(1,length(x0_vec));
     Q_dot_rec_ub_vec_x0 = Q_dot_rec_ub*ones(1,length(x0_vec));
-    if strcmp(param.solverType, 'M_imposed')
+    if strcmp(param.solverType, 'DTsc_imposed')
+        x0_matrix = [P_ev_guess_vec_x0' P_cd_guess_vec_x0' Q_dot_rec_guess_vec_x0'];
+        ub0_matrix = [P_ev_ub_vec_x0' P_cd_ub_vec_x0' Q_dot_rec_ub_vec_x0'];
+        lb0_matrix =[P_ev_lb_vec_x0' P_cd_lb_vec_x0' Q_dot_rec_lb_vec_x0'];
+    elseif strcmp(param.solverType, 'M_imposed')
         h_pp_su_lb_vec_x0 = CoolProp.PropsSI('H', 'P', P_cd_lb, 'Q', 0, fluid_wf)*ones(1,length(x0_vec));
-        h_pp_su_guess_vec_x0 = param.x0(4)*x0_vec;
-        h_pp_su_ub_vec_x0 = CoolProp.PropsSI('H', 'P', P_cd_ub, 'Q', 0, fluid_wf)*ones(1,length(x0_vec));
-    end
-    res_x0 = NaN*ones(1,length(x0_vec));
+        h_pp_su_ub_vec_x0 = CoolProp.PropsSI('H', 'P', P_cd_ub, 'Q', 0, fluid_wf)*ones(1,length(x0_vec));        
+        h_pp_su_guess_vec_x0 = max(h_pp_su_lb_vec_x0(1)+1, min(param.x0(4)*x0_vec, h_pp_su_ub_vec_x0(1))-1); 
+        x0_matrix = [P_ev_guess_vec_x0' P_cd_guess_vec_x0' Q_dot_rec_guess_vec_x0' h_pp_su_guess_vec_x0'];
+        ub0_matrix = [P_ev_ub_vec_x0' P_cd_ub_vec_x0' Q_dot_rec_ub_vec_x0' h_pp_su_ub_vec_x0'];
+        lb0_matrix =[P_ev_lb_vec_x0' P_cd_lb_vec_x0' Q_dot_rec_lb_vec_x0' h_pp_su_lb_vec_x0'];
+    end    
     for k = 1:length(x0_vec)
         index = index+1;
         dispstat(['x0 evaluation: : ' num2str(index) '/' num2str(length(P_cd_guess_vec)+length(x0_vec))])
-        out_x0 = OrganicRankineCycle([P_ev_guess_vec_x0(k) P_cd_guess_vec_x0(k) Q_dot_rec_guess_vec_x0(k)]./[P_ev_ub_vec_x0(k) P_cd_ub_vec_x0(k) Q_dot_rec_ub_vec_x0(k)], [P_ev_lb_vec_x0(k) P_cd_lb_vec_x0(k) Q_dot_rec_lb_vec_x0(k)], [P_ev_ub_vec_x0(k) P_cd_ub_vec_x0(k) Q_dot_rec_ub_vec_x0(k)], fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
-        if any(out_x0.flag.value < 0)
+        out_x0 = OrganicRankineCycle(x0_matrix(k,:)./ub0_matrix(k,:), lb0_matrix(k,:), ub0_matrix(k,:), fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+        if any(out_x0.flag.value < 0) || out_x0.res > 1
             res_x0(k) = NaN;
         else
             res_x0(k) =  out_x0.res;
         end
     end
+      
     P_cd_guess_vec = [P_cd_guess_vec_x0 P_cd_guess_vec];
     P_cd_lb_vec = [P_cd_lb_vec_x0 P_cd_lb_vec];
     P_cd_ub_vec = [P_cd_ub_vec_x0 P_cd_ub_vec];
@@ -315,7 +323,7 @@ if not(isempty(res_ordered))
     %options_fsolve = optimoptions('fsolve', 'Algorithm', 'Levenberg-Marquardt', 'Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
     %options_pattsearch = psoptimset('Display','iter','TolX', 1e-8, 'TolFun', 1e-8, 'TolMesh', 1e-8, 'MaxIter', 1e4, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
     %options_fminsearch = optimset('Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
-    options_fmincon = optimset('Disp','Iter','Algorithm','interior-point','Hessian','bfgs','GradObj','off','AlwaysHonorConstraints','bounds','UseParallel',true,'FinDiffType','forward','SubproblemAlgorithm','ldl-factorization','GradConstr','off','InitBarrierParam',1e-12,'TolX',1e-10,'TolFun',1e-10,'TolCon',1e-10,'MaxIter',10e2,'OutputFcn',@outputfunFS);    
+    options_fmincon = optimset('Disp','Iter','Algorithm','interior-point','Hessian','bfgs','GradObj','off','AlwaysHonorConstraints','bounds','UseParallel',true,'FinDiffType','forward','SubproblemAlgorithm','ldl-factorization','GradConstr','off','InitBarrierParam',1e-12,'TolX',1e-12,'TolFun',1e-12,'TolCon',1e-12,'MaxIter',10e2,'OutputFcn',@outputfunFS);    
     while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
         
         if strcmp(param.solverType, 'DTsc_imposed')       
@@ -338,7 +346,7 @@ if not(isempty(res_ordered))
         
         x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
         [out_ORC, TS_ORC] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
-        if all(out_ORC.res_vec < 1e-5) && all(out_ORC.flag.value>0)
+        if all(out_ORC.flag.value>0) && all(out_ORC.res_vec < 1e-5)
             out_ORC.flag_ORC = 1;
             stop = 1;
         else
@@ -742,6 +750,12 @@ else
     out.flag_cd = out_CD.flag;
     out.time_cd = out_CD.time;
     out.pinch_cd = out_CD.pinch;
+    if isfield(param.CD, 'W_dot_aux')
+        out.W_dot_cd = param.CD.W_dot_aux;
+    else
+        out.W_dot_cd = 0;
+    end
+    
     P_prev = out.P_cd_su;
     T_prev = out_CD.T_h_ex;
     h_prev = out_CD.h_h_ex;
@@ -792,7 +806,7 @@ out.M_tot = sum(out.Mass.value);
 out.DT_bis =  CoolProp.PropsSI('T', 'P', P_prev, 'Q', 0, fluid_wf)-T_prev;
 
 % ORC PERFORAMANCE
-out.W_dot_net = out.W_dot_exp - out.W_dot_pp;
+out.W_dot_net = out.W_dot_exp - out.W_dot_pp - out.W_dot_cd;
 out.eff_ORC_gross = out.W_dot_exp/Q_dot_in;
 out.eff_ORC_net = out.W_dot_net/Q_dot_in;
 
