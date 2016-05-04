@@ -115,7 +115,7 @@ if nargin == 0
     param.displayTS = 1;
     param.displayResults =0;
     
-    param.init = [ 0 0 1 0];
+    param.init = [ 1 1 1 1];
     param.nbr_test = 5;
 end
 
