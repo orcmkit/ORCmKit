@@ -340,7 +340,7 @@ end
 out.epsilon_su1 = max(0,(1-exp(-AU_su1/(M_dot*out.cp_su1))));
 out.DP_su = P_su-out.P_su1;
 out.Q_dot_su = max(0,out.epsilon_su1*M_dot*out.cp_su1*(out.T_su1 - T_w));
-out.h_su2 = min(h_max,max(out.h_ex_s,out.h_su1 - out.Q_dot_su/M_dot));
+out.h_su2 = min(h_max,max(max(out.h_ex_s, CoolProp.PropsSI('H','Q',0.01,'P',out.P_su1,fluid)),out.h_su1 - out.Q_dot_su/M_dot));
 out.s_su2 = CoolProp.PropsSI('S','H',out.h_su2,'P',out.P_su1,fluid);
 out.rho_su2 = CoolProp.PropsSI('D','H',out.h_su2,'P',out.P_su1,fluid);
 out.M_dot_in = N_exp/60*V_s*out.rho_su2;
