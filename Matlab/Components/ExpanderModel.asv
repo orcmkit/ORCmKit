@@ -75,7 +75,7 @@ if nargin == 0
     fluid = 'R245fa';                           %Nature of the fluid
     N_exp = 2000;                               %Rotational speed       [rpm]
     P_su = 1.153372634282432e+06;               %Supply pressure        [Pa]
-    h_su = 3.654377176733231e+05;               %Supply enthalpy        [J/kg]
+    h_su = CoolProp.PropsSI('H','P',P_su,'Q',0.005,fluid);%3.654377176733231e+05;               %Supply enthalpy        [J/kg]
     P_ex = 2.585969394779355e+05;               %Exhaust pressure       [Pa]
     T_amb = 2.831500000000000e+02;              %Ambient temperature    [K]
     param.displayResults = 1;                   %Flag to control the resustl display [0/1]
@@ -137,7 +137,7 @@ s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
 rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
 h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
 
-if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
+if P_su > P_ex %&& h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.01,fluid);
     %If the external conditions are viable (i.e. pressure ratio higher than
     %1 and in two phase conditions), we proceed to the modeling:
              
