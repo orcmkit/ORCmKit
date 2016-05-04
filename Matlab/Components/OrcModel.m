@@ -115,7 +115,7 @@ if nargin == 0
     param.displayTS = 1;
     param.displayResults =0;
     
-    param.init = [ 3 3 3 3];
+    param.init = [ 0 0 1 0];
     param.nbr_test = 5;
 end
 
@@ -153,7 +153,6 @@ elseif strcmp(param.solverType, 'DTsc_imposed')
     x_h_pp_su_guess0 = 1;
     [res,P_cd_guess_vec, P_cd_lb_vec, P_cd_ub_vec, P_ev_guess_vec, P_ev_lb_vec, P_ev_ub_vec, Q_dot_rec_guess_vec, Q_dot_rec_lb_vec, Q_dot_rec_max_vec] = deal(NaN*ones(1,length(P_cd_guess0)*length(x_rp_guess0)*length(x_Q_dot_rec_guess0)*length(x_h_pp_su_guess0)));
 end
-
 index = 0;
 for i_pcd = 1: length(P_cd_guess0)
     for i_rp = 1: length(x_rp_guess0)
@@ -224,7 +223,7 @@ for i_pcd = 1: length(P_cd_guess0)
     end
 end
 Q_dot_rec_ub = 10*max(Q_dot_rec_max_vec);
-Q_dot_rec_ub_vec = Q_dot_rec_ub*ones(1, length(Q_dot_rec_guess_vec));
+Q_dot_rec_ub_vec = Q_dot_rec_ub*ones(size(Q_dot_rec_guess_vec));
 
 fprintf('\n');
 
@@ -280,6 +279,11 @@ if isfield(param, 'x0')
         h_pp_su_ub_vec = [h_pp_su_ub_vec_x0 h_pp_su_ub_vec];
     end
     res = [res_x0 , res];
+    if max(param.init) <2 && min(res(not(isnan(res)))) > 1
+        out_ORC.flag_ORC = - 1;
+        TS_ORC = NaN;
+        return
+    end
 end
 
 P_cd_guess_vec = P_cd_guess_vec(not(isnan(res)));
@@ -323,7 +327,7 @@ if not(isempty(res_ordered))
     %options_fsolve = optimoptions('fsolve', 'Algorithm', 'Levenberg-Marquardt', 'Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
     %options_pattsearch = psoptimset('Display','iter','TolX', 1e-8, 'TolFun', 1e-8, 'TolMesh', 1e-8, 'MaxIter', 1e4, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
     %options_fminsearch = optimset('Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
-    options_fmincon = optimset('Disp','Iter','Algorithm','interior-point','Hessian','bfgs','GradObj','off','AlwaysHonorConstraints','bounds','UseParallel',true,'FinDiffType','forward','SubproblemAlgorithm','ldl-factorization','GradConstr','off','InitBarrierParam',1e-12,'TolX',1e-12,'TolFun',1e-12,'TolCon',1e-12,'MaxIter',10e2,'OutputFcn',@outputfunFS);    
+    options_fmincon = optimset('Disp','none','Algorithm','interior-point','Hessian','bfgs','GradObj','off','AlwaysHonorConstraints','bounds','UseParallel',true,'FinDiffType','forward','SubproblemAlgorithm','ldl-factorization','GradConstr','off','InitBarrierParam',1e-12,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-13,'MaxIter',1e3,'OutputFcn',@outputfunFS);    
     while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
         
         if strcmp(param.solverType, 'DTsc_imposed')       
@@ -346,7 +350,7 @@ if not(isempty(res_ordered))
         
         x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
         [out_ORC, TS_ORC] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
-        if all(out_ORC.flag.value>0) && all(out_ORC.res_vec < 1e-5)
+        if all(out_ORC.flag.value>0) && all(abs(out_ORC.res_vec) < 1e-5)
             out_ORC.flag_ORC = 1;
             stop = 1;
         else
