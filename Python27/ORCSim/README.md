@@ -1,4 +1,4 @@
-﻿ORCSim: organic Rankine Cycle Simulation Tool
+﻿ORCSim: Organic Rankine Cycle Simulation Tool
 ====================
 
 
