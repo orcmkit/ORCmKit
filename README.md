@@ -7,7 +7,7 @@ The library has been originally created by Rémi Dickes (University of Liège) a
 
 Three main programming languages are supported at the moment: Python, Matlab and EES.
 
-* ORCmKit has flexible licensing terms: |ghlicense|
+* ORCmKit has flexible licensing terms: MIT
 
 * The documentation is available along with examples
 
