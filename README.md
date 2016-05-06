@@ -13,6 +13,12 @@ Three main programming languages are supported at the moment: Python, Matlab and
 
 * Issues can be reported here.
 
+The ORCmKit library should be referenced as:
+
+* Rémi Dickes, Davide Ziviani, Michel de Paepe, Martijn van den Broek, Sylvain Quoilin, Vincent Lemort, "ORCmKit: an open-source library for organic Rankine cycle modelling and analysis", PROCEEDINGS OF ECOS 2016 - THE 29TH INTERNATIONAL CONFERENCE ON
+EFFICIENCY, COST, OPTIMIZATION, SIMULATION AND ENVIRONMENTAL IMPACT OF ENERGY SYSTEMS JUNE 19-23, 2016, PORTOROŽ, SLOVENIA.
+
+
 For additional information or requests please contact:
 * Rémi Dickes - rdickes@ulg.ac.be
 * Davide Ziviani - davide.ziviani@ugent.be
