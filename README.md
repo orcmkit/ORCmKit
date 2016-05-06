@@ -1,4 +1,4 @@
-# Welcome to ORCmKit
+Welcome to ORCmKit
 ====================
 
 ORC Modeling Kit (ORCmKit) is a comprehensive open-source library for the modeling of organic Rankine cycle (ORC) power systems.
@@ -14,5 +14,5 @@ Three main programming languages are supported at the moment: Python, Matlab and
 * Issues can be reported here.
 
 For additional information or requests please contact:
-Rémi Dickes - rdickes@ulg.ac.be
-Davide Ziviani - davide.ziviani@ugent.be
+* Rémi Dickes - rdickes@ulg.ac.be
+* Davide Ziviani - davide.ziviani@ugent.be
