@@ -1,4 +1,4 @@
-function [out_ORC, TS_ORC] = OrcModel(fluid_wf, fluid_htf, in_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+function [out_ORC, TS_ORC] = OrcModel2(fluid_wf, fluid_htf, in_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 
@@ -94,6 +94,8 @@ if nargin == 0
     param.EXP.V = 1.4e-3;
     param.EXP.displayResults = 0;
     param.EXP.displayTS = 0;
+    load('C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power\OffDesign\gamma_R245fa.mat'); 
+    param.EXP.gamma.gamma_PQ_pol = gamma_PQ_R245fa; param.EXP.gamma.gamma_PT_pol = gamma_PT_R245fa;
     
     DP_folder = [path '\PressureDrops\'];
     load([DP_folder, 'ParametersCalibration_DP.mat'])
@@ -184,7 +186,7 @@ for i_pcd = 1: length(P_cd_guess0)
                     h_pp_su_lb_vec(index)    = CoolProp.PropsSI('H', 'P', P_cd_lb, 'Q', 0, fluid_wf); 
                     h_pp_su_guess_vec(index) = guess.h_pp_su;
                     h_pp_su_ub_vec(index) = CoolProp.PropsSI('H', 'P', P_cd_ub, 'Q', 0, fluid_wf);
-                    
+                                       
                     if any(guess.flag.value < 0)
                         res(index) = NaN;
                     else
@@ -633,8 +635,8 @@ else
     P_exp_ex = x(2);
 end
 out.rp_exp = out.P_exp_su/P_exp_ex;
-[out_EXP, TS_EXP] = ExpanderModel(fluid_wf, out.P_exp_su, out.h_exp_su, N_exp, P_exp_ex, T_amb, param.EXP);
-out.m_dot_wf_bis = out_EXP.M_dot;
+[out_EXP, TS_EXP] = ExpanderModel2(fluid_wf, out.P_exp_su, out.h_exp_su, out.m_dot_wf, P_exp_ex, T_amb, param.EXP);
+out.N_exp_bis = out_EXP.N_exp;
 out.W_dot_exp = out_EXP.W_dot;
 out.Q_dot_exp = out_EXP.Q_dot_amb;
 out.M_exp = out_EXP.M;
@@ -820,15 +822,7 @@ out.eff_ORC_net = out.W_dot_net/Q_dot_in;
 % RESIDUALS and RESULTS
 out.res_ORC_Hsu = (1 - out.h_pp_su/h_prev);
 
-if out.m_dot_wf == 0 && out.m_dot_wf_bis == 0
-    out.res_ORC_Mdot = 0;
-elseif out.m_dot_wf == 0 && out.m_dot_wf_bis ~= 0
-    out.res_ORC_Mdot = 1;
-elseif out.m_dot_wf ~= 0 && out.m_dot_wf_bis == 0
-    out.res_ORC_Mdot = 1;
-else
-    out.res_ORC_Mdot = 1-out.m_dot_wf/out.m_dot_wf_bis;
-end
+out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
 
 if x(3) == 0 && out.Q_dot_rec == 0
     out.res_ORC_Qdot_rec = 0;
@@ -842,9 +836,9 @@ end
 
 if strcmp(param.solverType, 'M_imposed')
     out.res_ORC_M = (1 - out.M_tot/param.M_tot);
-    out.res_vec  = [out.res_ORC_Mdot    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
 elseif strcmp(param.solverType, 'DTsc_imposed')
-    out.res_vec  = [out.res_ORC_Mdot    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
 end
 
 if any(out.flag.value < 0)
@@ -890,6 +884,258 @@ end
 
 out = orderfields(out);
 end
+
+function [out, TS] = OrganicRankineCycle_Fast(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+x = max(x, lb./ub);
+x = min(x,ones(1,length(x)));
+x = x.*ub;
+x(1) = max(x(1), 1.001*x(2));
+i_flag = 1;
+i_mass = 1;
+
+% --------------------------------------------------------------------------------
+% PUMP ---------------------------------------------------------------------------
+% --------------------------------------------------------------------------------
+out.P_pp_su = x(2);
+if strcmp(param.solverType, 'M_imposed')
+    out.h_pp_su = x(4);
+elseif strcmp(param.solverType, 'DTsc_imposed')
+    out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
+end
+[out_PP, ~] = PumpModel(x(2), out.h_pp_su, x(1), fluid_wf, N_pp, param.PP);
+out.m_dot_wf = out_PP.m_dot;
+h_prev = out_PP.h_ex;
+P_prev = x(1);
+
+out.flag.value(1,i_flag) = out_PP.flag;
+out.flag.name{1,i_flag} = 'flag_pp';
+out.Mass.value(1,i_mass) = out_PP.M;
+out.Mass.name{1,i_mass} = 'M_pp';
+
+if any(out.flag.value) < 0
+    out.res = rand*1e5;
+    return
+end
+if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
+    i_mass = i_mass + 1;
+    out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+    out.Mass.name{1,i_mass} = 'M_aux_pp_ex';
+end
+
+% RECUPERATOR (cold side)
+if isfield(param, 'REC')
+    h_recc_su = h_prev;
+    P_recc_su = P_prev;
+    h_prev = min(h_prev + x(3)/out.m_dot_wf, CoolProp.PropsSI('H', 'P', P_prev, 'T', T_htf_su, fluid_wf));
+    if isfield(param, 'V_aux_recc_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = param.V_aux_recc_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+        out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
+    end
+end
+
+%EVAPORATOR
+[out_EV, ~] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, P_prev,h_prev, out.m_dot_wf , param.EV);
+h_prev = out_EV.h_c_ex;
+i_flag = i_flag+1;
+out.flag.value(1,i_flag) = out_EV.flag;
+out.flag.name{1,i_flag} = 'flag_ev';
+i_mass = i_mass+1;
+out.Mass.value(1,i_mass) = out_EV.M_c;
+out.Mass.name{1,i_mass} = 'M_ev';
+if any(out.flag.value) < 0
+    out.res = rand*1e5;
+    return
+end
+
+
+
+% LossesHP
+if isfield(param, 'LossesHP')
+    param.LossesHP.type_in = 'su';
+    [out_LossesHP, ~] = LossesModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, T_amb, param.LossesHP);
+    h_prev = out_LossesHP.h_ex;
+    P_prev = out_LossesHP.P_ex;
+    i_flag = i_flag+1;
+    out.flag.value(1,i_flag) = out_LossesHP.flag;
+    out.flag.name{1,i_flag} = 'flag_dphp';
+    if any(out.flag.value) < 0
+        out.res = rand*1e5;
+        return
+    end
+    if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+        out.Mass.name{1,i_mass} = 'M_aux_ev_ex';
+    end
+end
+
+% EXPANDER
+if isfield(param, 'LossesLP')
+    param.LossesLP.type_in = 'ex';
+    [out_LossesLP_bis, ~] = LossesModel(fluid_wf, x(2), out.h_pp_su, out.m_dot_wf, T_amb, param.LossesLP);
+    P_exp_ex = x(2)+out_LossesLP_bis.dp;
+    i_flag = i_flag+1;
+    out.flag.value(1,i_flag) = out_LossesLP_bis.flag;
+    out.flag.name{1,i_flag} = 'flag_dplp_bis';
+else
+    P_exp_ex = x(2);
+end
+[out_EXP, ~] = ExpanderModel2(fluid_wf, P_prev, h_prev, out.m_dot_wf, P_exp_ex, T_amb, param.EXP);
+out.N_exp_bis = out_EXP.N_exp;
+T_prev = out_EXP.T_ex;
+h_prev = out_EXP.h_ex;
+P_prev = P_exp_ex;
+i_flag = i_flag+1;
+out.flag.value(1,i_flag) = out_EXP.flag;
+out.flag.name{1,i_flag} = 'flag_exp';
+i_mass = i_mass+1;
+out.Mass.value(1,i_mass) = out_EXP.M;
+out.Mass.name{1,i_mass} = 'M_exp';
+if any(out.flag.value) < 0
+    out.res = rand*1e5;
+    return
+end
+if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
+    i_mass = i_mass + 1;
+    out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+    out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
+end
+
+
+% RECUPERATOR (hot side)
+if isfield(param, 'REC')
+    [out_REC, ~] = HexModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, fluid_wf, P_recc_su, h_recc_su, out.m_dot_wf, param.REC);
+    h_prev = out_REC.h_h_ex;
+    P_prev = out.P_rech_su;
+    i_flag = i_flag+1;
+    out.flag.value(1,i_flag) = out_REC.flag;
+    out.flag.name{1,i_flag} = 'flag_rec';
+    i_mass = i_mass+1;
+    out.Mass.value(1,i_mass) = out_REC.M_c;
+    out.Mass.name{1,i_mass} = 'M_recc';
+    i_mass = i_mass+1;
+    out.Mass.value(1,i_mass) = out_REC.M_h;
+    out.Mass.name{1,i_mass} = 'M_rech';
+    if any(out.flag.value) < 0
+        out.res = rand*1e5;
+        return
+    end
+end
+    if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+        out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
+    end
+
+% CONDENSER 
+
+[out_CD, ~] = HexModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
+
+out.M_cd = out_CD.M_h;
+h_prev = out_CD.h_h_ex;
+i_flag = i_flag+1;
+out.flag.value(1,i_flag) = out_CD.flag;
+out.flag.name{1,i_flag} = 'flag_cd';
+i_mass = i_mass+1;
+out.Mass.value(1,i_mass) = out_CD.M_h;
+out.Mass.name{1,i_mass} = 'M_cd';
+if any(out.flag.value) < 0
+    out.res = rand*1e5;
+    return
+end
+
+
+% LossesLP
+if isfield(param, 'LossesLP')
+    param.LossesLP.type_in = 'su';
+    [out_LossesLP, ~] = LossesModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, T_amb, param.LossesLP);
+    h_prev = out_LossesLP.h_ex;
+    P_prev = out_LossesLP.P_ex;
+    i_flag = i_flag+1;
+    out.flag.value(1,i_flag) = out_LossesLP.flag;
+    out.flag.name{1,i_flag} = 'flag_dplp';
+    TS.LossesLP = TS_LossesLP;
+    if any(out.flag.value) < 0
+        out.res = rand*1e5;
+        disp('fuck')
+        return
+    end
+    if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the expander if volume specified
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+        out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+    end
+end
+
+out.M_tot = sum(out.Mass.value);
+
+% RESIDUALS and RESULTS
+out.res_ORC_Hsu = (1 - out.h_pp_su/h_prev);
+
+out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
+
+if x(3) == 0 && out_REC.Q_dot_tot == 0
+    out.res_ORC_Qdot_rec = 0;
+elseif x(3) == 0 && out_REC.Q_dot_tot ~= 0
+    out.res_ORC_Qdot_rec = 1;
+elseif x(3) ~= 0 && out_REC.Q_dot_tot == 0
+    out.res_ORC_Qdot_rec = 1;
+else
+    out.res_ORC_Qdot_rec = 1 - x(3)/out_REC.Q_dot_tot;
+end
+
+if strcmp(param.solverType, 'M_imposed')
+    out.res_ORC_M = (1 - out.M_tot/param.M_tot);
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
+elseif strcmp(param.solverType, 'DTsc_imposed')
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+end
+
+if any(out.flag.value < 0)
+    out.res_vec  = 1e5*out.res_vec;
+end
+out.res  = norm(out.res_vec);
+
+out.x = x;
+
+% Construction of the TS variable
+TS.cycle.s = TS.PP.s;
+TS.cycle.T = TS.PP.T;
+if isfield(param, 'REC')
+    TS.cycle.s = [TS.cycle.s  TS.REC.s_c];
+    TS.cycle.T = [TS.cycle.T  TS.REC.T_c];
+end
+if isfield(param, 'PRE')
+    TS.cycle.s = [TS.cycle.s  TS.PRE.s_c];
+    TS.cycle.T = [TS.cycle.T  TS.PRE.T_c];
+end
+TS.cycle.s = [TS.cycle.s  TS.EV.s_c];
+TS.cycle.T = [TS.cycle.T  TS.EV.T_c];
+if isfield(param, 'LossesHP')
+    TS.cycle.s = [TS.cycle.s TS.LossesHP.s];
+    TS.cycle.T = [TS.cycle.T TS.LossesHP.T];
+end
+TS.cycle.s = [TS.cycle.s  TS.EXP.s];
+TS.cycle.T = [TS.cycle.T  TS.EXP.T];
+if isfield(param, 'REC')
+    TS.cycle.s = [TS.cycle.s  fliplr(TS.REC.s_h)];
+    TS.cycle.T = [TS.cycle.T  fliplr(TS.REC.T_h)];
+end
+TS.cycle.s = [TS.cycle.s fliplr(TS.CD.s_h)];
+TS.cycle.T = [TS.cycle.T fliplr(TS.CD.T_h)];
+if isfield(param, 'SUB')
+    TS.cycle.s = [TS.cycle.s  fliplr(TS.SUB.s_h)];
+    TS.cycle.T = [TS.cycle.T  fliplr(TS.SUB.T_h)];
+end
+if isfield(param, 'LossesLP')
+    TS.cycle.s = [TS.cycle.s TS.LossesLP.s];
+    TS.cycle.T = [TS.cycle.T TS.LossesLP.T];
+end
+
+out = orderfields(out);
+end
+
 
 function out = OrganicRankineCycle_init2(z, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 out.rp_pp = z(1)/z(2);
@@ -1059,8 +1305,8 @@ out.P_exp_su = P_prev;
 out.T_exp_su = T_prev;
 out.h_exp_su = h_prev;
 out.rp_exp = out.P_exp_su/P_exp_ex;
-[out_EXP, ~] = ExpanderModel(fluid_wf, out.P_exp_su, out.h_exp_su, N_exp, P_exp_ex, T_amb, param.EXP);
-out.m_dot_wf_bis = out_EXP.M_dot;
+[out_EXP, ~] = ExpanderModel2(fluid_wf, out.P_exp_su, out.h_exp_su, out.m_dot_wf, P_exp_ex, T_amb, param.EXP);
+out.N_exp_bis = out_EXP.N_exp;
 out.W_dot_exp = out_EXP.W_dot;
 out.Q_dot_exp = out_EXP.Q_dot_amb;
 out.M_exp = out_EXP.M;
@@ -1208,15 +1454,7 @@ out.M_tot = sum(out.Mass.value);
 % RESIDUALS and RESULTS
 out.res_ORC_Hsu = (1 - out.h_pp_su/h_prev);
 
-if out.m_dot_wf == 0 && out.m_dot_wf_bis == 0
-    out.res_ORC_Mdot = 0;
-elseif out.m_dot_wf == 0 && out.m_dot_wf_bis ~= 0
-    out.res_ORC_Mdot = 1;
-elseif out.m_dot_wf ~= 0 && out.m_dot_wf_bis == 0
-    out.res_ORC_Mdot = 1;
-else
-    out.res_ORC_Mdot = 1-out.m_dot_wf/out.m_dot_wf_bis;
-end
+out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
 
 if out.Q_dot_rec_guess == 0 && out.Q_dot_rec == 0
     out.res_ORC_Qdot_rec = 0;
@@ -1230,9 +1468,9 @@ end
 
 if strcmp(param.solverType, 'M_imposed')
     out.res_ORC_M = (1 - out.M_tot/param.M_tot);
-    out.res_vec  = [out.res_ORC_Mdot    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
 elseif strcmp(param.solverType, 'DTsc_imposed')
-    out.res_vec  = [out.res_ORC_Mdot    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
 end
 
 if any(out.flag.value < 0)

@@ -137,9 +137,9 @@ if nargin == 0
     % Define a demonstration case if HexModel.mat is not executed externally  
     
     fluid_h = 'R245fa';             % Nature of the hot fluid           [-]
-    m_dot_h = 0.05;                 % Mass flow rat of the hot fluid    [kg/s]
+    m_dot_h = 0.5;                 % Mass flow rat of the hot fluid    [kg/s]
     P_h_su =  3e5;                  % Supply pressure of the hot fluid  [Pa]
-    in_h_su =  4.9368e+05;          % Supply h or T of the hot fluid  	[J/kg pr K]
+    in_h_su =  14.9368e+05;          % Supply h or T of the hot fluid  	[J/kg pr K]
     param.type_h = 'H';             % Type of inputs for the hot fluid  ['H' or 'T']
     fluid_c = 'R245fa';             % Nature of the cold fluid        	[-]
     m_dot_c = 0.05;                 % Mass flow rat of the cold fluid  	[kg/s]
