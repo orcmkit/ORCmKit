@@ -7,9 +7,9 @@ function out = FCT_Exp2_SemiEmp(T_w, fluid, P_su, h_su, s_su, rho_su, h_ex_s, M_
 % rdickes @ulg.ac.be
 %
 % FCT_Exp2_SemiEmp is a constitutive subfunction of ExpanderModel_SemiEmp.m
-% It provides the evaluate the semi-empirical model based on the supply
-% conditions and a guess on the wall temperature.
-%%
+% It evaluates the semi-empirical model considering the supply
+% conditions and a guess value of the wall temperature.
+
 
 AU_su1 = AU_su_n*(M_dot/M_dot_n)^0.8;
 AU_ex1 = AU_ex_n*(M_dot/M_dot_n)^0.8;

@@ -1,4 +1,4 @@
-function [line_htf, line_ctf, line_orc] = Ts_diagram(TS, param)
+function [line_htf, line_ctf, line_orc] = Ts_diagram(TS, fluid, param)
 
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
@@ -42,7 +42,7 @@ function [line_htf, line_ctf, line_orc] = Ts_diagram(TS, param)
 
 %% MODELLING CODE
 
-if nargin == 1   
+if nargin == 2   
     % if no display information are probided by the user, default values
     % are given
     param.color_ctf = 'b';
@@ -124,4 +124,8 @@ if isfield(TS, 'DPLP')
     patchline([TS.DPLP.s(1) TS.DPLP.s(end)], [TS.DPLP.T(1) TS.DPLP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
 end
 
+hold on
+load(['TS_prop_',fluid , '.mat'])
+plot(s_TS_curve, T_TS_curve-273.15)
+hold off
 end

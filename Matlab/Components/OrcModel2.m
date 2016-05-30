@@ -37,7 +37,7 @@ function [out_ORC, TS_ORC] = OrcModel2(fluid_wf, fluid_htf, in_htf_su, P_htf_su,
 
 %% DEMONSTRATION CASE
 if nargin == 0
-
+    
     fluid_wf = 'R245fa';
     fluid_htf = 'PiroblocBasic';
     P_htf_su = 2e5;
@@ -76,10 +76,10 @@ if nargin == 0
     load([REC_folder, 'ParametersCalibration_REC.mat'])
     param.REC = REC_hConvVar;
     param.REC.V_h_tot = 0.001026;
-    param.REC.V_c_tot = 0.00108; 
+    param.REC.V_c_tot = 0.00108;
     param.REC.displayResults = 0;
     param.REC.displayTS = 0;
-       
+    
     PP_folder = [path '\Pump\'];
     load([PP_folder, 'ParametersCalibration_PP.mat'])
     param.PP = PP_SemiEmp;
@@ -94,7 +94,7 @@ if nargin == 0
     param.EXP.V = 1.4e-3;
     param.EXP.displayResults = 0;
     param.EXP.displayTS = 0;
-    load('C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power\OffDesign\gamma_R245fa.mat'); 
+    load('C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power\OffDesign\gamma_R245fa.mat');
     param.EXP.gamma.gamma_PQ_pol = gamma_PQ_R245fa; param.EXP.gamma.gamma_PT_pol = gamma_PT_R245fa;
     
     DP_folder = [path '\PressureDrops\'];
@@ -106,19 +106,20 @@ if nargin == 0
     param.LossesLP = DPLP_PhiDP;
     param.LossesLP.displayResults = 0;
     param.LossesLP.displayTS = 0;
- 
+    
     param.V_aux_pp_ex =  2.21035e-4;
     param.V_aux_recc_ex = 9.54259e-5;
     param.V_aux_ev_ex = 9.54259e-5;
     param.V_aux_exp_ex =  7.08995e-4;
     param.V_aux_rech_ex = 7.01469e-4;
-    param.V_aux_cd_ex = 5.991508e-3;
-    
+    param.V_liq_rec = 5.7e-3;
+    param.V_aux_cd_ex = 5.991508e-3 - param.V_liq_rec;
     param.displayTS = 1;
     param.displayResults =0;
     
     param.init = [ 2 2 2 2];
     param.nbr_test = 1;
+    param.display = 1;
 end
 
 tstart_ORC = tic;
@@ -136,8 +137,10 @@ end
 
 %% INITIAL CONDITIONS
 % 1) Automatic intial conditions
-fprintf('\n');
-dispstat('','init')
+if param.display
+    fprintf('\n');
+    dispstat('','init')
+end
 P_cd_lb = max(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su-10, fluid_wf), CoolProp.PropsSI('P_min', 'Q', 0, 'T', 273.15, fluid_wf));
 P_ev_ub = CoolProp.PropsSI('P', 'Q', 0, 'T', min(CoolProp.PropsSI('Tcrit', 'Q', 0, 'T',273, fluid_wf)-2, T_htf_su-1), fluid_wf);
 rp_max = P_ev_ub/P_cd_lb;
@@ -149,7 +152,7 @@ P_cd_guess0 = linspace(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su, fluid_wf),Co
 x_rp_guess0 =  linspace(0.1, 0.9, param.init(2));
 x_Q_dot_rec_guess0 = linspace(0.1, 0.5, param.init(3));
 if strcmp(param.solverType, 'M_imposed')
-    x_h_pp_su_guess0 = linspace(0.2, 0.8, param.init(4));
+    x_h_pp_su_guess0 = linspace(0, 1, param.init(4));
     [res,P_cd_guess_vec, P_cd_lb_vec, P_cd_ub_vec, P_ev_guess_vec, P_ev_lb_vec, P_ev_ub_vec, Q_dot_rec_guess_vec, Q_dot_rec_lb_vec, Q_dot_rec_max_vec,h_pp_su_lb_vec,h_pp_su_guess_vec,h_pp_su_ub_vec] = deal(NaN*ones(1,length(P_cd_guess0)*length(x_rp_guess0)*length(x_Q_dot_rec_guess0)*length(x_h_pp_su_guess0)));
 elseif strcmp(param.solverType, 'DTsc_imposed')
     x_h_pp_su_guess0 = 1;
@@ -158,12 +161,14 @@ end
 index = 0;
 for i_pcd = 1: length(P_cd_guess0)
     for i_rp = 1: length(x_rp_guess0)
-        for i_qdot_rec = 1: length(x_Q_dot_rec_guess0)           
+        for i_qdot_rec = 1: length(x_Q_dot_rec_guess0)
             if strcmp(param.solverType, 'M_imposed')
-                            
+                
                 for i_hpp_su = 1: length(x_h_pp_su_guess0)
                     index = index+1;
-                    dispstat(['x0 evaluation: ' num2str(index) '/' num2str(length(P_cd_guess_vec))])
+                    if param.display
+                        dispstat(['x0 evaluation: ' num2str(index) '/' num2str(length(P_cd_guess_vec))])
+                    end
                     P_cd_guess_vec(index) = P_cd_guess0(i_pcd);
                     P_cd_lb_vec(index) = P_cd_lb;
                     P_cd_ub_vec(index) = P_cd_ub;
@@ -182,11 +187,11 @@ for i_pcd = 1: length(P_cd_guess0)
                     Q_dot_rec_lb_vec(index) = Q_dot_rec_lb;
                     Q_dot_rec_guess_vec(index) = guess.Q_dot_rec_guess;
                     Q_dot_rec_max_vec(index) = guess.Q_dot_rec_max;
-
-                    h_pp_su_lb_vec(index)    = CoolProp.PropsSI('H', 'P', P_cd_lb, 'Q', 0, fluid_wf); 
+                    
+                    h_pp_su_lb_vec(index)    = CoolProp.PropsSI('H', 'P', P_cd_lb, 'Q', 0, fluid_wf);
                     h_pp_su_guess_vec(index) = guess.h_pp_su;
                     h_pp_su_ub_vec(index) = CoolProp.PropsSI('H', 'P', P_cd_ub, 'Q', 0, fluid_wf);
-                                       
+                    
                     if any(guess.flag.value < 0)
                         res(index) = NaN;
                     else
@@ -196,7 +201,9 @@ for i_pcd = 1: length(P_cd_guess0)
                 
             elseif strcmp(param.solverType, 'DTsc_imposed')
                 index = index+1;
-                dispstat(['x0 evaluation: ' num2str(index) '/' num2str(length(P_cd_guess_vec))])
+                if param.display
+                    dispstat(['x0 evaluation: ' num2str(index) '/' num2str(length(P_cd_guess_vec))])
+                end
                 P_cd_guess_vec(index) = P_cd_guess0(i_pcd);
                 P_cd_lb_vec(index) = P_cd_lb;
                 P_cd_ub_vec(index) = P_cd_ub;
@@ -226,9 +233,9 @@ for i_pcd = 1: length(P_cd_guess0)
 end
 Q_dot_rec_ub = 10*max(Q_dot_rec_max_vec);
 Q_dot_rec_ub_vec = Q_dot_rec_ub*ones(size(Q_dot_rec_guess_vec));
-
-fprintf('\n');
-
+if param.display
+    fprintf('\n');
+end
 
 % 3) Guess intial conditions based on a single point
 if isfield(param, 'x0')
@@ -240,7 +247,7 @@ if isfield(param, 'x0')
     P_ev_guess_vec_x0 = max(P_ev_lb+1, min(param.x0(1)*x0_vec, P_ev_ub-1));
     P_ev_lb_vec_x0 = P_ev_lb*ones(1,length(x0_vec));
     P_ev_ub_vec_x0 = P_ev_ub*ones(1,length(x0_vec));
-    Q_dot_rec_guess_vec_x0 = max(Q_dot_rec_lb+1, min(param.x0(3)*x0_vec, Q_dot_rec_ub-1)); 
+    Q_dot_rec_guess_vec_x0 = max(Q_dot_rec_lb+1, min(param.x0(3)*x0_vec, Q_dot_rec_ub-1));
     Q_dot_rec_lb_vec_x0 = Q_dot_rec_lb*ones(1,length(x0_vec));
     Q_dot_rec_ub_vec_x0 = Q_dot_rec_ub*ones(1,length(x0_vec));
     if strcmp(param.solverType, 'DTsc_imposed')
@@ -249,15 +256,17 @@ if isfield(param, 'x0')
         lb0_matrix =[P_ev_lb_vec_x0' P_cd_lb_vec_x0' Q_dot_rec_lb_vec_x0'];
     elseif strcmp(param.solverType, 'M_imposed')
         h_pp_su_lb_vec_x0 = CoolProp.PropsSI('H', 'P', P_cd_lb, 'Q', 0, fluid_wf)*ones(1,length(x0_vec));
-        h_pp_su_ub_vec_x0 = CoolProp.PropsSI('H', 'P', P_cd_ub, 'Q', 0, fluid_wf)*ones(1,length(x0_vec));        
-        h_pp_su_guess_vec_x0 = max(h_pp_su_lb_vec_x0(1)+1, min(param.x0(4)*x0_vec, h_pp_su_ub_vec_x0(1))-1); 
+        h_pp_su_ub_vec_x0 = CoolProp.PropsSI('H', 'P', P_cd_ub, 'Q', 0, fluid_wf)*ones(1,length(x0_vec));
+        h_pp_su_guess_vec_x0 = max(h_pp_su_lb_vec_x0(1)+1, min(param.x0(4)*x0_vec, h_pp_su_ub_vec_x0(1))-1);
         x0_matrix = [P_ev_guess_vec_x0' P_cd_guess_vec_x0' Q_dot_rec_guess_vec_x0' h_pp_su_guess_vec_x0'];
         ub0_matrix = [P_ev_ub_vec_x0' P_cd_ub_vec_x0' Q_dot_rec_ub_vec_x0' h_pp_su_ub_vec_x0'];
         lb0_matrix =[P_ev_lb_vec_x0' P_cd_lb_vec_x0' Q_dot_rec_lb_vec_x0' h_pp_su_lb_vec_x0'];
-    end    
+    end
     for k = 1:length(x0_vec)
         index = index+1;
-        dispstat(['x0 evaluation: : ' num2str(index) '/' num2str(length(P_cd_guess_vec)+length(x0_vec))])
+        if param.display
+            dispstat(['x0 evaluation: : ' num2str(index) '/' num2str(length(P_cd_guess_vec)+length(x0_vec))])
+        end
         out_x0 = OrganicRankineCycle(x0_matrix(k,:)./ub0_matrix(k,:), lb0_matrix(k,:), ub0_matrix(k,:), fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
         if any(out_x0.flag.value < 0) || out_x0.res > 1
             res_x0(k) = NaN;
@@ -265,7 +274,7 @@ if isfield(param, 'x0')
             res_x0(k) =  out_x0.res;
         end
     end
-      
+    
     P_cd_guess_vec = [P_cd_guess_vec_x0 P_cd_guess_vec];
     P_cd_lb_vec = [P_cd_lb_vec_x0 P_cd_lb_vec];
     P_cd_ub_vec = [P_cd_ub_vec_x0 P_cd_ub_vec];
@@ -311,43 +320,47 @@ res = res(not(isnan(res)));
 [res_ordered, j_order] = sort(res);
 Nbr_comb_x0 = length(j_order);
 Nbr_comb_x0_max = param.nbr_test;
-
-disp('x0 residuals and index:')
-fprintf('\n');
-disp(num2str([j_order(1:min(Nbr_comb_x0,Nbr_comb_x0_max)); res_ordered(1:min(Nbr_comb_x0,Nbr_comb_x0_max))]))
-fprintf('\n');
+if param.display
+    disp('x0 residuals and index:')
+    fprintf('\n');
+    disp(num2str([j_order(1:min(Nbr_comb_x0,Nbr_comb_x0_max)); res_ordered(1:min(Nbr_comb_x0,Nbr_comb_x0_max))]))
+    fprintf('\n');
+end
 
 if not(isempty(res_ordered))
     
-    fprintf('\n');
-    disp('Start iteration:')
-    fprintf('\n');
-    fprintf('%-10s %-5s %-60s %-15s %-60s %-60s %-10s %-100s\n', '#', 'i0', 'x_in', 'res_in', 'x_out', 'res_out', 'flag_ORC', 'flag components');
-    fprintf('\n');
-    
+    if param.display
+        fprintf('\n');
+        disp('Start iteration:')
+        fprintf('\n');
+        fprintf('%-10s %-5s %-60s %-15s %-60s %-60s %-10s %-100s\n', '#', 'i0', 'x_in', 'res_in', 'x_out', 'res_out', 'flag_ORC', 'flag components');
+        fprintf('\n');
+    end
     k= 1;
     out_ORC_best.res = 1e10;
     stop = 0;
     %options_fsolve = optimoptions('fsolve', 'Algorithm', 'Levenberg-Marquardt', 'Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
     %options_pattsearch = psoptimset('Display','iter','TolX', 1e-8, 'TolFun', 1e-8, 'TolMesh', 1e-8, 'MaxIter', 1e4, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
     %options_fminsearch = optimset('Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
-    %options_fmincon = optimset('Disp','iter','Algorithm','interior-point','Hessian','bfgs','GradObj','off','AlwaysHonorConstraints','bounds','UseParallel',true,'FinDiffType','forward','SubproblemAlgorithm','ldl-factorization','GradConstr','off','InitBarrierParam',1e-6,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);    
-    options_fmincon = optimset('Disp','iter','Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);    
+    %options_fmincon = optimset('Disp','iter','Algorithm','interior-point','Hessian','bfgs','GradObj','off','AlwaysHonorConstraints','bounds','UseParallel',true,'FinDiffType','forward','SubproblemAlgorithm','ldl-factorization','GradConstr','off','InitBarrierParam',1e-6,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
+    options_fmincon = optimset('Disp','none','Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
     while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
         
-        if strcmp(param.solverType, 'DTsc_imposed')       
+        if strcmp(param.solverType, 'DTsc_imposed')
             x0 = [P_ev_guess_vec(j_order(k))    P_cd_guess_vec(j_order(k))  Q_dot_rec_guess_vec(j_order(k))];
             ub = [P_ev_ub_vec(j_order(k))       P_cd_ub_vec(j_order(k))     Q_dot_rec_ub_vec(j_order(k))];
             lb = [P_ev_lb_vec(j_order(k))       P_cd_lb_vec(j_order(k))     Q_dot_rec_lb_vec(j_order(k))];
             A_ineq = [-1 1.001 0]; B_ineq = [0];
-        elseif strcmp(param.solverType, 'M_imposed') 
+        elseif strcmp(param.solverType, 'M_imposed')
             x0 = [P_ev_guess_vec(j_order(k))    P_cd_guess_vec(j_order(k))  Q_dot_rec_guess_vec(j_order(k))     h_pp_su_guess_vec(j_order(k))];
             ub = [P_ev_ub_vec(j_order(k))       P_cd_ub_vec(j_order(k))     Q_dot_rec_ub_vec(j_order(k))        h_pp_su_ub_vec(j_order(k))];
             lb = [P_ev_lb_vec(j_order(k))       P_cd_lb_vec(j_order(k))     Q_dot_rec_lb_vec(j_order(k))        h_pp_su_lb_vec(j_order(k))];
             A_ineq = [-1 1.001 0 0]; B_ineq = [0];
         end
         con = @(x) mycon(x, ub, fluid_wf, T_htf_su, T_ctf_su, N_pp, param);
-        fprintf('%-10s %-5d %-60s %-15s ', [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(res(j_order(k)), '%.4g'));
+        if param.display
+            fprintf('%-10s %-5d %-60s %-15s ', [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(res(j_order(k)), '%.4g'));
+        end
         f = @(x) OrganicRankineCycle_res( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
         %[x, ~, ~, output] = fsolve(f,x0./ub, options_fsolve);
         %[x, ~, ~, output] = fminsearch(f,x0./ub, options_fminsearch);
@@ -355,15 +368,20 @@ if not(isempty(res_ordered))
         
         x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
         [out_ORC, TS_ORC] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
-        if all(out_ORC.flag.value>0) && all(abs(out_ORC.res_vec) < 1e-5)
-            out_ORC.flag_ORC = 1;
-            stop = 1;
-        else
+        
+        if any(out_ORC.flag.value<0)
             out_ORC.flag_ORC = - 1;
             stop = 0;
+        elseif all(out_ORC.flag.value>0) && any(abs(out_ORC.res_vec) > 5e-5)
+            out_ORC.flag_ORC = -2;
+            stop = 0;
+        else
+            out_ORC.flag_ORC = 1;
+            stop = 1;
         end
-        fprintf('%-60s %-60s %-10s %-100s \n', ['[' num2str(x.*ub,'%15.4e') ']'], [ num2str(out_ORC.res, '%.4g') '  [ ' num2str(out_ORC.res_vec,'%15.4e') ' ] '], num2str(out_ORC.flag_ORC), num2str(out_ORC.flag.value));
-        
+        if param.display
+            fprintf('%-60s %-60s %-10s %-100s \n', ['[' num2str(x.*ub,'%15.4e') ']'], [ num2str(out_ORC.res, '%.4g') '  [ ' num2str(out_ORC.res_vec,'%15.4e') ' ] '], num2str(out_ORC.flag_ORC), num2str(out_ORC.flag.value));
+        end
         if out_ORC.res < out_ORC_best.res
             out_ORC_best = out_ORC;
         end
@@ -375,8 +393,10 @@ else
     TS_ORC = NaN;
 end
 out_ORC.time_ORC = toc(tstart_ORC);
-fprintf('\n')
-dispstat('','keepprev')
+if param.display
+    fprintf('\n')
+    dispstat('','keepprev')
+end
 out_ORC = orderfields(out_ORC);
 if param.displayResults ==1 && out_ORC.flag_ORC == - 1
     dispstat('','keepprev')
@@ -388,7 +408,7 @@ end
 if param.displayTS == 1
     figure
     hold all
-    [~,~, ~] = Ts_diagram(TS_ORC);
+    [~,~, ~] = Ts_diagram(TS_ORC, fluid_wf);
     hold off
     grid on
     xlabel('Entropy [J/kg.K]','fontsize',14,'fontweight','bold')
@@ -480,11 +500,6 @@ out.Mass.name{1,i_mass} = 'M_pp';
 
 TS.PP = TS_PP;
 
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    disp('fuck')
-    return
-end
 if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
     i_mass = i_mass + 1;
     out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -555,11 +570,7 @@ if isfield(param, 'PRE')
     out.Mass.name{1,i_mass} = 'M_ev';
     TS.PRE = TS_PRE;
     TS.EV = TS_EV;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+    
 else
     out.P_ev_su = P_prev;
     out.T_ev_su = T_prev;
@@ -582,13 +593,8 @@ else
     i_mass = i_mass+1;
     out.Mass.value(1,i_mass) = out.M_ev;
     out.Mass.name{1,i_mass} = 'M_ev';
-    TS.EV = TS_EV; 
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
-
+    TS.EV = TS_EV;
+    
 end
 
 % LossesHP
@@ -608,11 +614,7 @@ if isfield(param, 'LossesHP')
     out.flag.value(1,i_flag) = out_LossesHP.flag;
     out.flag.name{1,i_flag} = 'flag_dphp';
     TS.LossesHP = TS_LossesHP;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+    
     if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
         i_mass = i_mass + 1;
         out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -654,11 +656,7 @@ i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out.M_exp;
 out.Mass.name{1,i_mass} = 'M_exp';
 TS.EXP = TS_EXP;
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    disp('fuck')
-    return
-end
+
 if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
     i_mass = i_mass + 1;
     out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -691,17 +689,13 @@ if isfield(param, 'REC')
     out.Mass.value(1,i_mass) = out.M_rech;
     out.Mass.name{1,i_mass} = 'M_rech';
     TS.REC = TS_REC;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+    
 end
-    if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
-    end
+if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
+    i_mass = i_mass + 1;
+    out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+    out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
+end
 
 % CONDENSER &/ SUBCOOLER
 if isfield(param, 'SUB')
@@ -775,11 +769,7 @@ else
     out.Mass.value(1,i_mass) = out.M_cd;
     out.Mass.name{1,i_mass} = 'M_cd';
     TS.CD = TS_CD;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+    
 end
 
 % LossesLP
@@ -799,20 +789,28 @@ if isfield(param, 'LossesLP')
     out.flag.value(1,i_flag) = out_LossesLP.flag;
     out.flag.name{1,i_flag} = 'flag_dplp';
     TS.LossesLP = TS_LossesLP;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
-    if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the expander if volume specified
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
-    end
 end
 
+% LIQUID RECEIVER AND PIPES
+if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the liquid receiver if volume specified
+    i_mass = i_mass + 1;
+    out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+    out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+end
+if isfield(param, 'V_liq_rec')
+    if abs((h_prev-CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf))/h_prev)<1e-3
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
+        out.Mass.name{1,i_mass} = 'M_liq_receiver';
+    else
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+        out.Mass.name{1,i_mass} = 'M_liq_receiver';
+    end
+end
 out.M_tot = sum(out.Mass.value);
 out.DT_bis =  CoolProp.PropsSI('T', 'P', P_prev, 'Q', 0, fluid_wf)-T_prev;
+
 
 % ORC PERFORAMANCE
 out.W_dot_net = out.W_dot_exp - out.W_dot_pp - out.W_dot_cd;
@@ -913,10 +911,7 @@ out.flag.name{1,i_flag} = 'flag_pp';
 out.Mass.value(1,i_mass) = out_PP.M;
 out.Mass.name{1,i_mass} = 'M_pp';
 
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    return
-end
+
 if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
     i_mass = i_mass + 1;
     out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -944,11 +939,6 @@ out.flag.name{1,i_flag} = 'flag_ev';
 i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out_EV.M_c;
 out.Mass.name{1,i_mass} = 'M_ev';
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    return
-end
-
 
 
 % LossesHP
@@ -960,10 +950,7 @@ if isfield(param, 'LossesHP')
     i_flag = i_flag+1;
     out.flag.value(1,i_flag) = out_LossesHP.flag;
     out.flag.name{1,i_flag} = 'flag_dphp';
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        return
-    end
+    
     if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
         i_mass = i_mass + 1;
         out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -993,10 +980,7 @@ out.flag.name{1,i_flag} = 'flag_exp';
 i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out_EXP.M;
 out.Mass.name{1,i_mass} = 'M_exp';
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    return
-end
+
 if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
     i_mass = i_mass + 1;
     out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -1017,18 +1001,15 @@ if isfield(param, 'REC')
     i_mass = i_mass+1;
     out.Mass.value(1,i_mass) = out_REC.M_h;
     out.Mass.name{1,i_mass} = 'M_rech';
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        return
-    end
+    
 end
-    if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
-    end
+if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
+    i_mass = i_mass + 1;
+    out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+    out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
+end
 
-% CONDENSER 
+% CONDENSER
 
 [out_CD, ~] = HexModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
 
@@ -1040,11 +1021,6 @@ out.flag.name{1,i_flag} = 'flag_cd';
 i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out_CD.M_h;
 out.Mass.name{1,i_mass} = 'M_cd';
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    return
-end
-
 
 % LossesLP
 if isfield(param, 'LossesLP')
@@ -1055,15 +1031,23 @@ if isfield(param, 'LossesLP')
     i_flag = i_flag+1;
     out.flag.value(1,i_flag) = out_LossesLP.flag;
     out.flag.name{1,i_flag} = 'flag_dplp';
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
-    if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the expander if volume specified
+end
+
+% LIQUID RECEIVER AND PIPES
+if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the liquid receiver if volume specified
+    i_mass = i_mass + 1;
+    out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+    out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+end
+if isfield(param, 'V_liq_rec')
+    if abs((h_prev-CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf))/h_prev)<1e-2
         i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+        out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
+        out.Mass.name{1,i_mass} = 'M_liq_receiver';
+    else
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+        out.Mass.name{1,i_mass} = 'M_liq_receiver';
     end
 end
 
@@ -1091,15 +1075,14 @@ elseif strcmp(param.solverType, 'DTsc_imposed')
     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
 end
 
-if any(out.flag.value < 0)
-    out.res_vec  = 1e5*out.res_vec;
-end
+% if any(out.flag.value < 0)
+%     out.res_vec  = 1e5*out.res_vec;
+% end
 out.res  = norm(out.res_vec);
 
 out.x = x;
 
 end
-
 
 function out = OrganicRankineCycle_init2(z, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 out.rp_pp = z(1)/z(2);
@@ -1141,7 +1124,7 @@ if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump 
     out.Mass.name{1,i_mass} = 'M_aux_pp_ex';
 end
 
-% LP LOSSES 
+% LP LOSSES
 if isfield(param, 'LossesLP')
     param.LossesLP.type_in = 'ex';
     [out_LossesLP_bis, ~] = LossesModel(fluid_wf, z(2), out.h_pp_su, out.m_dot_wf, T_amb, param.LossesLP);
@@ -1159,7 +1142,7 @@ if isfield(param, 'REC')
     out.P_recc_su = P_prev;
     out.T_recc_su = out_PP.T_ex;
     out.h_recc_su = out_PP.h_ex;
-    out.Q_dot_rec_max = HEX_Qdotmax(fluid_wf, out.m_dot_wf, P_exp_ex, CoolProp.PropsSI('H', 'P', P_exp_ex, 'T',T_htf_su, fluid_wf), fluid_wf, out.m_dot_wf, out.P_recc_su, out.h_recc_su, param.REC); 
+    out.Q_dot_rec_max = HEX_Qdotmax(fluid_wf, out.m_dot_wf, P_exp_ex, CoolProp.PropsSI('H', 'P', P_exp_ex, 'T',T_htf_su, fluid_wf), fluid_wf, out.m_dot_wf, out.P_recc_su, out.h_recc_su, param.REC);
     out.Q_dot_rec_guess = z(3)*out.Q_dot_rec_max;
     h_prev = min(out.h_recc_su + out.Q_dot_rec_guess/out.m_dot_wf, CoolProp.PropsSI('H', 'P', out.P_recc_su, 'T', T_htf_su, fluid_wf));
     P_prev = out.P_recc_su;
@@ -1406,10 +1389,23 @@ if isfield(param, 'LossesLP')
     out.flag.value(1,i_flag) = out_LossesLP.flag;
     out.flag.name{1,i_flag} = 'flag_dplp';
     out.flag_LossesLP = out_LossesLP.flag;
-    if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the expander if volume specified
+end
+
+% LIQUID RECEIVER AND PIPES
+if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the liquid receiver if volume specified
+    i_mass = i_mass + 1;
+    out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+    out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+end
+if isfield(param, 'V_liq_rec')
+    if abs((h_prev-CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf))/h_prev)<1e-2
         i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+        out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
+        out.Mass.name{1,i_mass} = 'M_liq_receiver';
+        %     else
+        i_mass = i_mass + 1;
+        out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+        out.Mass.name{1,i_mass} = 'M_liq_receiver';
     end
 end
 
@@ -1437,9 +1433,9 @@ elseif strcmp(param.solverType, 'DTsc_imposed')
     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
 end
 
-if any(out.flag.value < 0)
-    out.res_vec  = 1e5*out.res_vec;
-end
+% if any(out.flag.value < 0)
+%     out.res_vec  = 1e5*out.res_vec;
+% end
 out.res  = norm(out.res_vec);
 
 out = orderfields(out);
@@ -1459,7 +1455,7 @@ elseif strcmp(param.solverType, 'DTsc_imposed')
     h_pp_su = CoolProp.PropsSI('H', 'P', P_pp_su, 'T', CoolProp.PropsSI('T', 'P', P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
 end
 [out_PP, ] = PumpModel(P_pp_su, h_pp_su, P_pp_ex, fluid_wf, N_pp, param.PP);
-Q_dot_rec_max = HEX_Qdotmax(fluid_wf, out_PP.m_dot, P_pp_su, CoolProp.PropsSI('H', 'P', P_pp_su, 'T',T_htf_su, fluid_wf), fluid_wf, out_PP.m_dot, P_pp_ex, out_PP.h_ex, param.REC); 
+Q_dot_rec_max = HEX_Qdotmax(fluid_wf, out_PP.m_dot, P_pp_su, CoolProp.PropsSI('H', 'P', P_pp_su, 'T',T_htf_su, fluid_wf), fluid_wf, out_PP.m_dot, P_pp_ex, out_PP.h_ex, param.REC);
 c(1) = Q_dot_rec-Q_dot_rec_max;
 c_eq = [];
 end
@@ -1471,5 +1467,5 @@ end
 
 function stop = outputfunFS(x, optimValues, state)
 %disp(norm(optimValues.fval))
-stop = norm(optimValues.fval) < 1e-5;
+stop = norm(optimValues.fval) < 5e-5;
 end

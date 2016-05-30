@@ -136,88 +136,97 @@ function [out,TS] = HexModel(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su,
 if nargin == 0    
     % Define a demonstration case if HexModel.mat is not executed externally  
     
-    fluid_h = 'R245fa';             % Nature of the hot fluid           [-]
-    m_dot_h = 0.5;                 % Mass flow rat of the hot fluid    [kg/s]
+    fluid_h = 'PiroblocBasic';      % Nature of the hot fluid           [-]
+    m_dot_h = 0.8; %0.5;                  % Mass flow rat of the hot fluid    [kg/s]
     P_h_su =  3e5;                  % Supply pressure of the hot fluid  [Pa]
-    in_h_su =  14.9368e+05;          % Supply h or T of the hot fluid  	[J/kg pr K]
-    param.type_h = 'H';             % Type of inputs for the hot fluid  ['H' or 'T']
+    in_h_su =  3.531500000000000e+02; %400;                 % Supply h or T of the hot fluid  	[J/kg pr K]
+    param.type_h = 'T';             % Type of inputs for the hot fluid  ['H' or 'T']
     fluid_c = 'R245fa';             % Nature of the cold fluid        	[-]
-    m_dot_c = 0.05;                 % Mass flow rat of the cold fluid  	[kg/s]
-    P_c_su = 4e5;                   % Supply pressure of the cold fluid	[Pa]
-    in_c_su = 2.2651e+05;           % Supply h or T of the cold fluid  	[J/kg pr K]
+    m_dot_c = 0.1;%0.015899945748693; %0.05;                 % Mass flow rat of the cold fluid  	[kg/s]
+    P_c_su = 5.719211993932171e+05; %4e5;                   % Supply pressure of the cold fluid	[Pa]
+    in_c_su = 2.219364526160259e+05;           % Supply h or T of the cold fluid  	[J/kg pr K]
     param.type_c = 'H';             % Type of inputs for the cold fluid	['H' or 'T']
     param.displayResults = 1;
     param.displayTS = 1;
     param.modelType = 'hConvVar';
     
-    switch param.modelType
-        
-        case 'CstPinch' % Example of paramters for modelType = CstPinch 
-            param.pinch = 5;
-            param.V_h_tot = 1;
-            param.V_c_tot = 1;
-            
-        case 'CstEff'   % Example of paramters for modelType = CstEff 
-            param.epsilon_th = 1;
-            param.V_h_tot = 1;
-            param.V_c_tot = 1;
-            
-        case 'PolEff'   % Example of paramters for modelType = PolEff
-            param.m_dot_c_n = 0.149;
-            param.m_dot_h_n = 0.149;
-            param.CoeffPolEff = [0.913872425354551 1.601103316261962 -1.161513908064705 0.244892183446199 -2.586460052802316 1.912516752474164];  
-            param.V_h_tot = 1;
-            param.V_c_tot = 1;
-            
-        case 'hConvCst' % Example of paramters for modelType = hConvCst            
-            param.hConv_h_liq = 500;
-            param.hConv_h_tp = 10000;
-            param.hConv_h_vap = 200;
-            param.hConv_c_liq = 500;
-            param.hConv_c_tp = 10000;
-            param.hConv_c_vap = 200;
-            param.A_tot = 5.45000;
-            param.V_h_tot = 1;
-            param.V_c_tot = 1;
-            
-        case 'hConvVar' % Example of paramters for modelType = hConvVar         
-            param.m_dot_h_n = 0.618652995944947;
-            param.m_dot_c_n = 0.618652995944947;
-            param.hConv_c_liq_n = 2.379272937774658e+02;
-            param.hConv_c_tp_n = 2.379272937774658e+02;
-            param.hConv_c_vap_n = 2.379272937774658e+02;
-            param.hConv_h_liq_n = 1.125000000000000e+02;
-            param.hConv_h_tp_n = 1.125000000000000e+02;
-            param.hConv_h_vap_n = 1.125000000000000e+02;
-            param.n = 0.8;
-            param.A_tot = 5.45000;
-            param.V_h_tot = 1;
-            param.V_c_tot = 1;
-            
-        case 'hConvCor' % Example of paramters for modelType = hConvCor           
-            param.m_c_liq = 0.7;
-            param.m_c_vap = 0.7;
-            param.n_c_liq = 0.333;
-            param.n_c_vap = 0.333;
-            param.C_c_liq = 0.308120727539063;
-            param.C_c_tp = 0.308120727539063;
-            param.C_c_vap =0.308120727539063;
-            param.CS_c = 0.020845188;
-            param.Dh_c = 0.356328;            
-            param.m_h_liq = 0.7;
-            param.m_h_vap = 0.7;
-            param.n_h_liq = 0.333;
-            param.n_h_vap = 0.333;            
-            param.C_h_liq = 1.833880424499512;
-            param.C_h_tp = 2.999996185302734;
-            param.C_h_vap = 1.833880424499512;
-            param.CS_h = 0.020845188;
-            param.Dh_h = 0.356328;    
-            param.A_tot = 5.45000;
-            param.V_h_tot = 1;
-            param.V_c_tot = 1;
-    end
-        
+%     switch param.modelType
+%         
+%         case 'CstPinch' % Example of paramters for modelType = CstPinch 
+%             param.pinch = 5;
+%             param.V_h_tot = 1;
+%             param.V_c_tot = 1;
+%             
+%         case 'CstEff'   % Example of paramters for modelType = CstEff 
+%             param.epsilon_th = 1;
+%             param.V_h_tot = 1;
+%             param.V_c_tot = 1;
+%             
+%         case 'PolEff'   % Example of paramters for modelType = PolEff
+%             param.m_dot_c_n = 0.149;
+%             param.m_dot_h_n = 0.149;
+%             param.CoeffPolEff = [0.913872425354551 1.601103316261962 -1.161513908064705 0.244892183446199 -2.586460052802316 1.912516752474164];  
+%             param.V_h_tot = 1;
+%             param.V_c_tot = 1;
+%             
+%         case 'hConvCst' % Example of paramters for modelType = hConvCst            
+%             param.hConv_h_liq = 500;
+%             param.hConv_h_tp = 10000;
+%             param.hConv_h_vap = 200;
+%             param.hConv_c_liq = 500;
+%             param.hConv_c_tp = 10000;
+%             param.hConv_c_vap = 200;
+%             param.A_tot = 5.45000;
+%             param.V_h_tot = 1;
+%             param.V_c_tot = 1;
+%             
+%         case 'hConvVar' % Example of paramters for modelType = hConvVar         
+%             param.m_dot_h_n = 0.618652995944947;
+%             param.m_dot_c_n = 0.618652995944947;
+%             param.hConv_c_liq_n = 2.379272937774658e+02;
+%             param.hConv_c_tp_n = 2.379272937774658e+02;
+%             param.hConv_c_vap_n = 2.379272937774658e+02;
+%             param.hConv_h_liq_n = 1.125000000000000e+02;
+%             param.hConv_h_tp_n = 1.125000000000000e+02;
+%             param.hConv_h_vap_n = 1.125000000000000e+02;
+%             param.n = 0.8;
+%             param.A_tot = 5.45000;
+%             param.V_h_tot = 1;
+%             param.V_c_tot = 1;
+%             
+%         case 'hConvCor' % Example of paramters for modelType = hConvCor           
+%             param.m_c_liq = 0.7;
+%             param.m_c_vap = 0.7;
+%             param.n_c_liq = 0.333;
+%             param.n_c_vap = 0.333;
+%             param.C_c_liq = 0.308120727539063;
+%             param.C_c_tp = 0.308120727539063;
+%             param.C_c_vap =0.308120727539063;
+%             param.CS_c = 0.020845188;
+%             param.Dh_c = 0.356328;            
+%             param.m_h_liq = 0.7;
+%             param.m_h_vap = 0.7;
+%             param.n_h_liq = 0.333;
+%             param.n_h_vap = 0.333;            
+%             param.C_h_liq = 1.833880424499512;
+%             param.C_h_tp = 2.999996185302734;
+%             param.C_h_vap = 1.833880424499512;
+%             param.CS_h = 0.020845188;
+%             param.Dh_h = 0.356328;    
+%             param.A_tot = 5.45000;
+%             param.V_h_tot = 1;
+%             param.V_c_tot = 1;
+%     end
+%         
+path = 'C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power';
+
+    EV_folder = [path '\Evaporator\'];
+    load([EV_folder, 'ParametersCalibration_EV.mat'])
+    param = EV_hConvVar;
+    param.V_h_tot = 0.009;
+    param.V_c_tot = 0.009;
+    param.displayResults = 0;
+    param.displayTS = 1;
 end
 
 tstart_hex = tic;
@@ -543,10 +552,11 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0
             if f(ub) > 0
                 Q_dot_eff = ub; % HEX so oversized that the effective heat power is equal to Q_dot_max
             else
-                Q_dot_eff = zeroBrent ( lb, ub, 1e-6, 1e-6, f ); % Solver driving residuals of HEX_hConvVar_res to zero
+                Q_dot_eff = zeroBrent ( lb, ub, 1e-8, 1e-8, f ); % Solver driving residuals of HEX_hConvVar_res to zero
             end
             out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_eff, param); %Evaluate temperature profile based on Q_dot_eff
             out.Q_dot_tot = Q_dot_eff;
+            out.epsilon_th = Q_dot_eff/Q_dot_max;
             out.h_h_ex = out.H_h_vec(1);
             out.h_c_ex = out.H_c_vec(end);
             out.T_h_ex = out.T_h_vec(1);
@@ -583,7 +593,7 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0
             out.M_h = sum(out.M_h_vec);
             out.M_c = sum(out.M_c_vec);
             
-            % Flag evaluation            
+            % Flag evaluation 
             if out.resA <1e-4
                 out.flag = 1;
             else
@@ -591,6 +601,7 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0
                     if Q_dot_eff == Q_dot_max
                         out.flag = 2;
                     else
+                        %fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, param
                         out.flag = -1;
                     end
                     

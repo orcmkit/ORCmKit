@@ -478,11 +478,11 @@ out.Mass.name{1,i_mass} = 'M_pp';
 
 TS.PP = TS_PP;
 
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    disp('fuck')
-    return
-end
+% if any(out.flag.value) < 0
+%     out.res = rand*1e5;
+%     disp('fuck')
+%     return
+% end
 if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
     i_mass = i_mass + 1;
     out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -553,11 +553,11 @@ if isfield(param, 'PRE')
     out.Mass.name{1,i_mass} = 'M_ev';
     TS.PRE = TS_PRE;
     TS.EV = TS_EV;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+%     if any(out.flag.value) < 0
+%         out.res = rand*1e5;
+%         disp('fuck')
+%         return
+%     end
 else
     out.P_ev_su = P_prev;
     out.T_ev_su = T_prev;
@@ -581,11 +581,11 @@ else
     out.Mass.value(1,i_mass) = out.M_ev;
     out.Mass.name{1,i_mass} = 'M_ev';
     TS.EV = TS_EV; 
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+%     if any(out.flag.value) < 0
+%         out.res = rand*1e5;
+%         disp('fuck')
+%         return
+%     end
 
 end
 
@@ -606,11 +606,11 @@ if isfield(param, 'LossesHP')
     out.flag.value(1,i_flag) = out_LossesHP.flag;
     out.flag.name{1,i_flag} = 'flag_dphp';
     TS.LossesHP = TS_LossesHP;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+%     if any(out.flag.value) < 0
+%         out.res = rand*1e5;
+%         disp('fuck')
+%         return
+%     end
     if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
         i_mass = i_mass + 1;
         out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -652,11 +652,11 @@ i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out.M_exp;
 out.Mass.name{1,i_mass} = 'M_exp';
 TS.EXP = TS_EXP;
-if any(out.flag.value) < 0
-    out.res = rand*1e5;
-    disp('fuck')
-    return
-end
+% if any(out.flag.value) < 0
+%     out.res = rand*1e5;
+%     disp('fuck')
+%     return
+% end
 if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
     i_mass = i_mass + 1;
     out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -689,11 +689,11 @@ if isfield(param, 'REC')
     out.Mass.value(1,i_mass) = out.M_rech;
     out.Mass.name{1,i_mass} = 'M_rech';
     TS.REC = TS_REC;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+%     if any(out.flag.value) < 0
+%         out.res = rand*1e5;
+%         disp('fuck')
+%         return
+%     end
 end
     if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
         i_mass = i_mass + 1;
@@ -773,11 +773,11 @@ else
     out.Mass.value(1,i_mass) = out.M_cd;
     out.Mass.name{1,i_mass} = 'M_cd';
     TS.CD = TS_CD;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+%     if any(out.flag.value) < 0
+%         out.res = rand*1e5;
+%         disp('fuck')
+%         return
+%     end
 end
 
 % LossesLP
@@ -797,11 +797,11 @@ if isfield(param, 'LossesLP')
     out.flag.value(1,i_flag) = out_LossesLP.flag;
     out.flag.name{1,i_flag} = 'flag_dplp';
     TS.LossesLP = TS_LossesLP;
-    if any(out.flag.value) < 0
-        out.res = rand*1e5;
-        disp('fuck')
-        return
-    end
+%     if any(out.flag.value) < 0
+%         out.res = rand*1e5;
+%         disp('fuck')
+%         return
+%     end
     if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the expander if volume specified
         i_mass = i_mass + 1;
         out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
@@ -846,10 +846,9 @@ if strcmp(param.solverType, 'M_imposed')
 elseif strcmp(param.solverType, 'DTsc_imposed')
     out.res_vec  = [out.res_ORC_Mdot    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
 end
-
-if any(out.flag.value < 0)
-    out.res_vec  = 1e5*out.res_vec;
-end
+% if any(out.flag.value < 0)
+%     out.res_vec  = 1e5*out.res_vec;
+% end
 out.res  = norm(out.res_vec);
 
 out.x = x;
@@ -1235,9 +1234,9 @@ elseif strcmp(param.solverType, 'DTsc_imposed')
     out.res_vec  = [out.res_ORC_Mdot    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
 end
 
-if any(out.flag.value < 0)
-    out.res_vec  = 1e5*out.res_vec;
-end
+% if any(out.flag.value < 0)
+%     out.res_vec  = 1e5*out.res_vec;
+% end
 out.res  = norm(out.res_vec);
 
 out = orderfields(out);
