@@ -1402,7 +1402,7 @@ if isfield(param, 'V_liq_rec')
         i_mass = i_mass + 1;
         out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
         out.Mass.name{1,i_mass} = 'M_liq_receiver';
-        %     else
+    else
         i_mass = i_mass + 1;
         out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
         out.Mass.name{1,i_mass} = 'M_liq_receiver';
