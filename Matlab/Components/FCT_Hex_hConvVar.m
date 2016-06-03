@@ -64,7 +64,7 @@ for j = 1:length(out.T_h_vec)-1
     elseif strcmp(param.fin_c, 'none')
         out.eff_c(j) = 1;
     else
-        eta_eff = FinSchmidt(out.hConv_c(j), param.fin_c.k, param.fin_c.th, param.fin_c.r, param.fin_c.B, param.fin_c.H);
+        eta_eff = FCT_FinSchmidt(out.hConv_c(j), param.fin_c.k, param.fin_c.th, param.fin_c.r, param.fin_c.B, param.fin_c.H);
         out.eff_c(j) = 1-param.fin_c.omega_f*(1-eta_eff);
     end
     

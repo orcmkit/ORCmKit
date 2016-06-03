@@ -248,7 +248,8 @@ elseif strcmp(param.type_phi, 'phi_1')
 elseif strcmp(param.type_phi, 'phi_0')
     phi = M_dot^2/CoolProp.PropsSI('D','P',out.P_su,'Q',0,fluid);
 end
-out.dp = max(0,min(param.funPhi_dp(phi), out.P_su - 2*CoolProp.PropsSI('pmin','Q',0,'H',1e5,fluid)));
+%out.dp = max(0,min(param.funPhi_dp(phi), out.P_su - 2*CoolProp.PropsSI('pmin','Q',0,'H',1e5,fluid)));
+out.dp = max(0,min(param.funPhi_dp(phi), out.P_su - 1e3));
 out.P_ex = out.P_su-out.dp;
 out.Q_dot = param.AU*(CoolProp.PropsSI('T','P',out.P_ex,'H',out.h_su,fluid)-T_amb);
 out.h_ex = h_su-out.Q_dot/M_dot;

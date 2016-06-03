@@ -72,7 +72,6 @@ if nargin == 0
     param.CD.V_c_tot = 0.7585;
     param.CD.displayResults = 0;
     param.CD.displayTS = 0;
-    param.CD.W_dot_aux = 0;
     
     REC_folder = [path '\Recuperator\'];
     load([REC_folder, 'ParametersCalibration_REC.mat'])
@@ -363,15 +362,13 @@ if not(isempty(res_ordered))
         if param.display
             fprintf('%-10s %-5d %-60s %-15s ', [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(res(j_order(k)), '%.4g'));
         end
-        param.eval_type = 'fast';
-        f = @(x) FCT_ORC_Ext_Npp_Nexp_res( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+        f = @(x) OrganicRankineCycle_res( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
         %[x, ~, ~, output] = fsolve(f,x0./ub, options_fsolve);
         %[x, ~, ~, output] = fminsearch(f,x0./ub, options_fminsearch);
         %[x, ~, ~,  ] = patternsearch(f,x0./ub,[],[],[],[],lb./ub,ub./ub,[],options_pattsearch);
         
         x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
-        param.eval_type = 'long';
-        [out_ORC, TS_ORC] = FCT_ORC_Ext_Npp_Nexp(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+        [out_ORC, TS_ORC] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
         
         if any(out_ORC.flag.value<0)
             out_ORC.flag_ORC = - 1;
@@ -457,7 +454,10 @@ end
 
 end
 
-
+function res = OrganicRankineCycle_res( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+[out, ~] = OrganicRankineCycle_Fast(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+res = out.res;
+end
 
 function [out, TS] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 x = max(x, lb./ub);
@@ -478,11 +478,7 @@ if strcmp(param.solverType, 'M_imposed')
     out.DT_sc = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-out.T_pp_su;
 elseif strcmp(param.solverType, 'DTsc_imposed')
     out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc;
-    if param.DT_sc ~= 0
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
-    else
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
-    end
+    out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', out.T_pp_su, fluid_wf);
     out.DT_sc = param.DT_sc;
 end
 [out_PP, TS_PP] = PumpModel(out.P_pp_su, out.h_pp_su, x(1), fluid_wf, N_pp, param.PP);
@@ -1106,11 +1102,7 @@ if strcmp(param.solverType, 'M_imposed')
     out.DT_sc = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-out.T_pp_su;
 elseif strcmp(param.solverType, 'DTsc_imposed')
     out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc;
-    if param.DT_sc ~= 0
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
-    else
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
-    end
+    out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', out.T_pp_su, fluid_wf);
     out.DT_sc = param.DT_sc;
 end
 [out_PP, ~] = PumpModel(out.P_pp_su, out.h_pp_su, z(1), fluid_wf, N_pp, param.PP);

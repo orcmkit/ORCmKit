@@ -43,84 +43,22 @@ function out = HEX_profile_2(fluid_h, m_dot_h, P_h, in_h, fluid_c, m_dot_c, P_c,
 % See the documentation for further details or contact rdickes@ulg.ac.be
 
 %% MODELLING CODE
-decim = 3; % degree of accuracy used for comparing the entalpies
 
 if strcmp(param.type_h,'H') && strcmp(param.type_c,'H')  %% CASE 1 : HOT FLUID AND COLD FLUID MIGHT EXPERIENCE A PHASE CHANGE
-    % Cell division for hot fluid (create a vector of enthalpy the different zones on the hot fluid side)
+    % Cell division for hot fluid (create a vector of enthalpy the different zones on the hot fluid side)    
     if strcmp(param.port_h,'su')
-        h_h_su = in_h;
-        h_h_ex = h_h_su - Q_dot/m_dot_h;
+        H_h_vec = H_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'hot');
     elseif strcmp(param.port_h,'ex')
-        h_h_ex = in_h;
-        h_h_su = h_h_ex + Q_dot/m_dot_h;
+        H_h_vec = H_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'cold');
     end
-    if not(isempty(strfind(fluid_h, 'INCOMP:')))
-        h_h_l = h_h_su*3;
-        h_h_v = h_h_su*3;
-    else
-        h_h_l = CoolProp.PropsSI('H','P',P_h,'Q',0, fluid_h);
-        h_h_v = CoolProp.PropsSI('H','P',P_h,'Q',1, fluid_h);
-    end 
-    if round(h_h_v,decim) < round(h_h_ex,decim) 
-        H_h_vec = [h_h_ex  h_h_su]; %if vapour-phase only
-    elseif round(h_h_l,decim) > round(h_h_su,decim)
-        H_h_vec = [h_h_ex  h_h_su]; % if liquid-phase only
-    elseif (round(h_h_l,decim) < round(h_h_ex,decim)) && (round(h_h_v,decim) > round(h_h_su,decim)) 
-        H_h_vec = [h_h_ex  h_h_su]; % if two-phase only
-    elseif (round(h_h_l,decim) < round(h_h_su,decim)) && (round(h_h_l,decim) > round(h_h_ex,decim))
-        if (round(h_h_v,decim) < round(h_h_su,decim))
-            H_h_vec = [h_h_ex  h_h_l  h_h_v  h_h_su]; % if liquid, two phase and vapour
-        else
-            H_h_vec = [h_h_ex  h_h_l  h_h_su]; % if liquid and two phase
-        end
-    elseif (round(h_h_v,decim) > round(h_h_ex,decim)) && (round(h_h_v,decim) < round(h_h_su,decim))
-        if (round(h_h_l,decim) > round(h_h_ex,decim))
-            H_h_vec = [h_h_ex  h_h_l  h_h_v  h_h_su]; % if liquid, two phase and vapour
-        else
-            H_h_vec = [h_h_ex  h_h_v  h_h_su]; % of twp phase and vapour
-        end
-    else
-        H_h_vec = [h_h_ex  h_h_su]; %in all other cases (should never happen)
-    end
-    
+ 
     % Cell division for cold fluid (create a vector of enthalpy the different zones on the cold fluid side)
     if strcmp(param.port_c,'su')
-        h_c_su = in_c;
-        h_c_ex = h_c_su + Q_dot/m_dot_c;
+        H_c_vec = H_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'cold');
     elseif strcmp(param.port_c,'ex')
-        h_c_ex = in_c;
-        h_c_su = h_c_ex - Q_dot/m_dot_c;
-    end
+        H_c_vec = H_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'hot');
 
-    if not(isempty(strfind(fluid_c, 'INCOMP:')))
-        h_c_l = h_c_ex*3;
-        h_c_v = h_c_ex*3;
-    else
-        h_c_l = CoolProp.PropsSI('H','P',P_c,'Q',0, fluid_c);
-        h_c_v = CoolProp.PropsSI('H','P',P_c,'Q',1, fluid_c);
     end
-    if round(h_c_v,decim) < round(h_c_su,decim)
-        H_c_vec = [h_c_su  h_c_ex]; % if vapour only
-    elseif round(h_c_l,decim) > round(h_c_ex,decim)
-        H_c_vec = [h_c_su  h_c_ex]; % if liquid only
-    elseif (round(h_c_l,decim) < round(h_c_su,decim)) && (round(h_c_v,decim) > round(h_c_ex,decim))
-        H_c_vec = [h_c_su  h_c_ex]; % if two-phase only
-    elseif (round(h_c_l,decim) > round(h_c_su,decim)) && (round(h_c_l,decim) < round(h_c_ex,decim))
-        if (round(h_c_v,decim) < round(h_c_ex,decim))
-            H_c_vec = [h_c_su  h_c_l  h_c_v  h_c_ex]; % if liquid, two phase and vapour
-        else
-            H_c_vec = [h_c_su  h_c_l  h_c_ex]; % if liquid and two-phase
-        end
-    elseif (round(h_c_v,decim) > round(h_c_su,decim)) && (round(h_c_v,decim) < round(h_c_ex,decim))
-        if (round(h_c_l,decim) > round(h_c_su,decim))
-            H_c_vec = [h_c_su  h_c_l  h_c_v  h_c_ex]; % if liquid, two phase and vapour
-        else
-            H_c_vec = [h_c_su  h_c_v  h_c_ex]; %if two-phase and vapour
-        end
-    else
-        H_c_vec = [h_c_su  h_c_ex]; %in all other cases (should never happen)
-    end
-
     % Cell divitions for entire heat exchanger
     j = 1;
     while  j < max(length(H_h_vec),length(H_c_vec))-1
@@ -151,54 +89,22 @@ if strcmp(param.type_h,'H') && strcmp(param.type_c,'H')  %% CASE 1 : HOT FLUID A
     
 
 elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'H') %% CASE 2 : HOT FLUID IS LIQUID (incompressible fluid) AND COLD FLUID MIGHT EXPERIENCE A PHASE CHANGE   
+    % Cell division for cold fluid (create a vector of enthalpy the different zones on the cold fluid side)
     if strcmp(param.port_c,'su')
-        h_c_su = in_c;
-        h_c_ex = h_c_su + Q_dot/m_dot_c;
+        H_c_vec = H_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'cold');
     elseif strcmp(param.port_c,'ex')
-        h_c_ex = in_c;
-        h_c_su = h_c_ex - Q_dot/m_dot_c;
-    end
-    if not(isempty(strfind(fluid_c, 'INCOMP:')))
-        h_c_l = h_c_ex*3;
-        h_c_v = h_c_ex*3;
-    else
-        h_c_l = CoolProp.PropsSI('H','P',P_c,'Q',0, fluid_c);
-        h_c_v = CoolProp.PropsSI('H','P',P_c,'Q',1, fluid_c);
-    end
-    
-    if round(h_c_v,decim) < round(h_c_su,decim)
-        H_c_vec = [h_c_su  h_c_ex];
-    elseif round(h_c_l,decim) > round(h_c_ex,decim)
-        H_c_vec = [h_c_su  h_c_ex];
-    elseif (round(h_c_l,decim) < round(h_c_su,decim)) && (round(h_c_v,decim) > round(h_c_ex,decim))
-        H_c_vec = [h_c_su  h_c_ex];
-    elseif (round(h_c_l,decim) > round(h_c_su,decim)) && (round(h_c_l,decim) < round(h_c_ex,decim))
-        if (round(h_c_v,decim) < round(h_c_ex,decim))
-            H_c_vec = [h_c_su  h_c_l  h_c_v  h_c_ex];
-        else
-            H_c_vec = [h_c_su  h_c_l  h_c_ex];
-        end
-    elseif (round(h_c_v,decim) > round(h_c_su,decim)) && (round(h_c_v,decim) < round(h_c_ex,decim))
-        if (round(h_c_l,decim) > round(h_c_su,decim))
-            H_c_vec = [h_c_su  h_c_l  h_c_v  h_c_ex];
-        else
-            H_c_vec = [h_c_su  h_c_v  h_c_ex];
-        end
+        H_c_vec = H_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'hot');
     end
     
     % if hot fluid incompressible (T as input), only one cell of liquid phase
     if strcmp(param.port_h,'su')
         T_h_su = in_h;
-        f_T_h_ex = @(x) Thex_def(x, T_h_su,  P_h, m_dot_h, Q_dot, fluid_h);
-        lb =  T_h_su-Q_dot/m_dot_h/sf_PropsSI_bar('C', T_h_su, T_h_su, P_h, fluid_h)-30;
-        ub = T_h_su;
-        T_h_ex = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_h_ex );
+        T_hvec = T_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'hot');
+        T_h_ex = T_hvec(1);
     elseif strcmp(param.port_h,'ex')
         T_h_ex = in_h;      
-        f_T_h_su = @(x) Tcex_def(x, T_h_ex,  P_h, m_dot_h, Q_dot, fluid_h);
-        lb =  T_h_ex;
-        ub = T_h_ex+Q_dot/m_dot_h/sf_PropsSI_bar('C', T_h_ex, T_h_ex, P_h, fluid_h)+30;
-        T_h_su = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_h_su );
+        T_hvec = T_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'cold');
+        T_h_su = T_hvec(end);
     end
     cp_h = sf_PropsSI_bar('C', T_h_su, T_h_ex, P_h, fluid_h);
     Q_dot_vec = NaN*ones(1,length(H_c_vec)-1);
@@ -227,54 +133,24 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'H') %% CASE 2 : HOT FLUI
     
 
 elseif strcmp(param.type_h,'H') && strcmp(param.type_c,'T')  %% CASE 3 : HOT FLUID MIGHT EXPERIENCE A PHASE CHANGE  AND COLD FLUID IS LIQUID (incompressible fluid)
+    % Cell division for hot fluid (create a vector of enthalpy the different zones on the hot fluid side)
     if strcmp(param.port_h,'su')
-        h_h_su = in_h;
-        h_h_ex = h_h_su - Q_dot/m_dot_h;
+        H_h_vec = H_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'hot');
     elseif strcmp(param.port_h,'ex')
-        h_h_ex = in_h;
-        h_h_su = h_h_ex + Q_dot/m_dot_h;
-    end
-    if not(isempty(strfind(fluid_h, 'INCOMP:')))
-        h_h_l = h_h_su*3;
-        h_h_v = h_h_su*3;
-    else
-        h_h_l = CoolProp.PropsSI('H','P',P_h,'Q',0, fluid_h);
-        h_h_v = CoolProp.PropsSI('H','P',P_h,'Q',1, fluid_h);
-    end 
-    if round(h_h_v,decim) < round(h_h_ex,decim)
-        H_h_vec = [h_h_ex  h_h_su];
-    elseif round(h_h_l,decim) > round(h_h_su,decim)
-        H_h_vec = [h_h_ex  h_h_su];
-    elseif (round(h_h_l,decim) < round(h_h_ex,decim)) && (round(h_h_v,decim) > round(h_h_su,decim))
-        H_h_vec = [h_h_ex  h_h_su];
-    elseif (round(h_h_l,decim) < round(h_h_su,decim)) && (round(h_h_l,decim) > round(h_h_ex,decim))
-        if (round(h_h_v,decim) < round(h_h_su,decim))
-            H_h_vec = [h_h_ex  h_h_l  h_h_v  h_h_su];
-        else
-            H_h_vec = [h_h_ex  h_h_l  h_h_su];
-        end
-    elseif (round(h_h_v,decim) > round(h_h_ex,decim)) && (round(h_h_v,decim) < round(h_h_su,decim))
-        if (round(h_h_l,decim) > round(h_h_ex,decim))
-            H_h_vec = [h_h_ex  h_h_l  h_h_v  h_h_su];
-        else
-            H_h_vec = [h_h_ex  h_h_v  h_h_su];
-        end
+        H_h_vec = H_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'cold');
     end
     
     % if cold fluid incompressible (T as input), only one cell of liquid phase  
     if strcmp(param.port_c,'su')
         T_c_su = in_c;
-        f_T_c_ex = @(x) Tcex_def(x, T_c_su,  P_c, m_dot_c, Q_dot, fluid_c);
-        lb =  T_c_su;
-        ub = T_c_su+Q_dot/m_dot_c/sf_PropsSI_bar('C', T_c_su, T_c_su, P_c, fluid_c)+30;
-        T_c_ex = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_c_ex );
+        T_cvec = T_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'cold');
+        T_c_ex = T_cvec(end);
     elseif strcmp(param.port_c,'ex')
         T_c_ex = in_c;      
-        f_T_c_su = @(x) Thex_def(x, T_c_ex,  P_c, m_dot_c, Q_dot, fluid_c);
-        lb =  T_c_ex-Q_dot/m_dot_c/sf_PropsSI_bar('C', T_c_ex, T_c_ex, P_c, fluid_c)-30;
-        ub = T_c_ex;
-        T_c_su = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_c_su );
+        T_cvec = T_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'hot');
+        T_c_su = T_cvec(1);
     end
+    
     cp_c = sf_PropsSI_bar('C', T_c_su, T_c_ex, P_c, fluid_c);
     T_c_vec = [T_c_su T_c_ex];
     Q_dot_vec = NaN*ones(1,length(H_h_vec)-1);
@@ -302,16 +178,12 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'T')
     % if cold fluid incompressible (T as input), only one cell of liquid phase  
     if strcmp(param.port_c,'su')
         T_c_su = in_c;
-        f_T_c_ex = @(x) Tcex_def(x, T_c_su,  P_c, m_dot_c, Q_dot, fluid_c);
-        lb =  T_c_su;
-        ub = T_c_su+Q_dot/m_dot_c/sf_PropsSI_bar('C', T_c_su, T_c_su, P_c, fluid_c)+30;
-        T_c_ex = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_c_ex );
+        T_cvec = T_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'cold');
+        T_c_ex = T_cvec(end);
     elseif strcmp(param.port_c,'ex')
         T_c_ex = in_c;      
-        f_T_c_su = @(x) Thex_def(x, T_c_ex,  P_c, m_dot_c, Q_dot, fluid_c);
-        lb =  T_c_ex-Q_dot/m_dot_c/sf_PropsSI_bar('C', T_c_ex, T_c_ex, P_c, fluid_c)-30;
-        ub = T_c_ex;
-        T_c_su = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_c_su );
+        T_cvec = T_vec_definition(fluid_c, m_dot_c, P_c, in_c, Q_dot, 'hot');
+        T_c_su = T_cvec(1);
     end
     out.T_c_vec = [T_c_su T_c_ex];
     out.H_c_vec = NaN;   
@@ -319,16 +191,12 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'T')
     % if hot fluid incompressible (T as input), only one cell of liquid phase 
     if strcmp(param.port_h,'su')
         T_h_su = in_h;
-        f_T_h_ex = @(x) Thex_def(x, T_h_su,  P_h, m_dot_h, Q_dot, fluid_h);
-        lb =  T_h_su-Q_dot/m_dot_h/sf_PropsSI_bar('C', T_h_su, T_h_su, P_h, fluid_h)-30;
-        ub = T_h_su;
-        T_h_ex = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_h_ex );
+        T_hvec = T_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'hot');
+        T_h_ex = T_hvec(1);
     elseif strcmp(param.port_h,'ex')
-        T_h_ex = in_h;
-        f_T_h_su = @(x) Tcex_def(x, T_h_ex,  P_h, m_dot_h, Q_dot, fluid_h);
-        lb =  T_h_ex;
-        ub = T_h_ex+Q_dot/m_dot_h/sf_PropsSI_bar('C', T_h_ex, T_h_ex, P_h, fluid_h)+30;
-        T_h_su = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_h_su );
+        T_h_ex = in_h;      
+        T_hvec = T_vec_definition(fluid_h, m_dot_h, P_h, in_h, Q_dot, 'cold');
+        T_h_su = T_hvec(end);
     end
     out.T_h_vec = [T_h_ex T_h_su]; 
     out.H_h_vec = NaN;
@@ -339,10 +207,3 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'T')
 end
 end
 
-function err = Tcex_def(Tex, Tsu,  Psu, Mdot, Qdot, fluid)
-err = Tex-(Tsu+Qdot/Mdot/sf_PropsSI_bar('C', Tsu, Tex, Psu, fluid));
-end
-
-function err = Thex_def(Tex, Tsu,  Psu, Mdot, Qdot, fluid)
-err = Tex-(Tsu-Qdot/Mdot/sf_PropsSI_bar('C', Tsu, Tex, Psu, fluid));
-end

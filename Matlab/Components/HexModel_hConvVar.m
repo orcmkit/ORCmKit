@@ -37,6 +37,7 @@ function [out,TS] = HexModel_hConvVar(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c
 %           param.V_h_tot = HEX volume for the hot fluid side [m^3]
 %           param.V_c_tot = HEX volume for the cold fluid side [m^3]
 %           param.displayTS = flag to display the temperature profiles or not [1/0]
+%           param.generateTS = flag to generate the TS output [1/0]
 %
 % The model outputs are:
 %       - out: a structure variable which includes at miniumum the following information:
@@ -70,35 +71,36 @@ function [out,TS] = HexModel_hConvVar(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c
 % See the documentation for further details or contact rdickes@ulg.ac.be
 
 %% DEMONSTRATION CASE -- COMMENT THIS SECTION IF EXTERNAL CALL FOR SPEED IMPROVEMENT
-
-if nargin == 0
-    % Define a demonstration case if HexModel.mat is not executed externally
-    fluid_h = 'PiroblocBasic';      % Nature of the hot fluid           [-]
-    m_dot_h = 0.5;                  % Mass flow rat of the hot fluid    [kg/s]
-    P_h_su =  3e5;                  % Supply pressure of the hot fluid  [Pa]
-    in_h_su =  400;                 % Supply h or T of the hot fluid  	[J/kg pr K]
-    param.type_h = 'T';             % Type of inputs for the hot fluid  ['H' or 'T']
-    fluid_c = 'R245fa';             % Nature of the cold fluid        	[-]
-    m_dot_c = 0.05;                 % Mass flow rat of the cold fluid  	[kg/s]
-    P_c_su = 4e5;                   % Supply pressure of the cold fluid	[Pa]
-    in_c_su = 2.2651e+05;           % Supply h or T of the cold fluid  	[J/kg pr K]
-    param.type_c = 'H';             % Type of inputs for the cold fluid	['H' or 'T']
-    param.displayResults = 1;
-    param.displayTS = 1;
-    param.m_dot_h_n = 0.618652995944947;
-    param.m_dot_c_n = 0.618652995944947;
-    param.hConv_c_liq_n = 2.379272937774658e+02;
-    param.hConv_c_tp_n = 2.379272937774658e+02;
-    param.hConv_c_vap_n = 2.379272937774658e+02;
-    param.hConv_h_liq_n = 1.125000000000000e+02;
-    param.hConv_h_tp_n = 1.125000000000000e+02;
-    param.hConv_h_vap_n = 1.125000000000000e+02;
-    param.n = 0.8;
-    param.A_h_tot = 5.45000;
-    param.A_c_tot = 5.45000;
-    param.V_h_tot = 1;
-    param.V_c_tot = 1;
-end
+% if nargin == 0
+%     % Define a demonstration case if HexModel.mat is not executed externally
+%     fluid_h = 'PiroblocBasic';      % Nature of the hot fluid           [-]
+%     m_dot_h = 0.5;                  % Mass flow rat of the hot fluid    [kg/s]
+%     P_h_su =  3e5;                  % Supply pressure of the hot fluid  [Pa]
+%     in_h_su =  400;                 % Supply h or T of the hot fluid  	[J/kg pr K]
+%     param.type_h = 'T';             % Type of inputs for the hot fluid  ['H' or 'T']
+%     fluid_c = 'R245fa';             % Nature of the cold fluid        	[-]
+%     m_dot_c = 0.05;                 % Mass flow rat of the cold fluid  	[kg/s]
+%     P_c_su = 4e5;                   % Supply pressure of the cold fluid	[Pa]
+%     in_c_su = 2.2651e+05;           % Supply h or T of the cold fluid  	[J/kg pr K]
+%     param.type_c = 'H';             % Type of inputs for the cold fluid	['H' or 'T']
+%     param.displayResults = 1;
+%     param.displayTS = 1;
+%     param.m_dot_h_n = 0.618652995944947;
+%     param.m_dot_c_n = 0.618652995944947;
+%     param.hConv_c_liq_n = 2.379272937774658e+02;
+%     param.hConv_c_tp_n = 2.379272937774658e+02;
+%     param.hConv_c_vap_n = 2.379272937774658e+02;
+%     param.hConv_h_liq_n = 1.125000000000000e+02;
+%     param.hConv_h_tp_n = 1.125000000000000e+02;
+%     param.hConv_h_vap_n = 1.125000000000000e+02;
+%     param.n = 0.8;
+%     param.A_h_tot = 5.45000;
+%     param.A_c_tot = 5.45000;
+%     param.V_h_tot = 1;
+%     param.V_c_tot = 1;
+%     param.generateTS = 0;
+% 
+% end
 
  
 %% HEAT EXCHANGER MODELING
@@ -138,20 +140,23 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0
     
     % Entropy vector calculation
     [out.s_h_vec, out.s_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
-    if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
-        for i = 1: length(out.H_h_vec)
-            out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+    if param.generateTS
+        if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
+            for i = 1: length(out.H_h_vec)
+                out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+            end
         end
-    end
-    if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
-        for i = 1: length(out.H_c_vec)
-            out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+        if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
+            for i = 1: length(out.H_c_vec)
+                out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+            end
         end
     end
     
     % Mass calculation
     out.V_h_vec = param.V_h_tot*(out.A_h./param.A_h_tot);
     out.V_c_vec = param.V_c_tot*(out.A_h./param.A_h_tot);
+    [out.M_h_vec, out.M_c_vec] = deal(NaN*ones(1, length(out.V_h_vec)));
     for i = 1: length(out.V_h_vec)
         if strcmp(param.type_h,'H')
             out.M_h_vec(i) = out.V_h_vec(i)*(CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h)+CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))/2;
@@ -182,8 +187,7 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0
             out.flag = -2;
         end
     end
-    
-    
+        
 else
     %If no, there is not any heat power transfered
     Q_dot_eff = 0;
@@ -196,20 +200,23 @@ else
     
     % Entropy calculation
     [out.s_h_vec, out.s_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
-    if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
-        for i = 1: length(out.H_h_vec)
-            out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+    if param.generateTS
+        if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
+            for i = 1: length(out.H_h_vec)
+                out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+            end
         end
-    end
-    if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
-        for i = 1: length(out.H_c_vec)
-            out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+        if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
+            for i = 1: length(out.H_c_vec)
+                out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+            end
         end
     end
     
     % Mass calculation
     out.V_h_vec = param.V_h_tot*(out.Qdot_vec./out.Q_dot_tot);
     out.V_c_vec = param.V_c_tot*(out.Qdot_vec./out.Q_dot_tot);
+    [out.M_h_vec, out.M_c_vec] = deal(NaN*ones(1, length(out.V_h_vec)));
     for i = 1: length(out.V_h_vec)
         if strcmp(param.type_h,'H')
             out.M_h_vec(i) = out.V_h_vec(i)*(CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h)+CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))/2;
