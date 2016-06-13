@@ -1,8 +1,8 @@
-function [out, TS] = FCT_ORC_Ext_Npp_Nexp(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+function [out, TS] = FCT_ORC_Ext_Npp_Nexp_2(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 
 % Impose :   All external conditions, N_exp, N_pp, either DT_sc or M_tot
-% Guess :    P_pp_ex, P_pp_su, Q_dot_rec (and h_su_pp if M_tot is imposed)
-% Residuals: Q_dot_rec, N_exp, h_su_pp (and M_tot, if charge imposed)    
+% Guess :    P_pp_ex, P_pp_su, h_ev_ex (and h_pp_su if M_tot is imposed)
+% Residuals: Q_dot_rec, N_exp, h_cd_ex (and M_tot, if charge imposed)    
 
 
 x = max(x, lb./ub);
@@ -18,9 +18,16 @@ i_mass = 1;
 % --------------------------------------------------------------------------------
 out.P_pp_su = x(2);
 if strcmp(param.solverType, 'M_imposed')
-    out.h_pp_su = x(4);
-    out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'H', out.h_pp_su, fluid_wf) ;
+    %     out.h_pp_su = min(x(4), CoolProp.PropsSI('H', 'P', out.P_pp_su*0.999, 'Q', 0, fluid_wf));
+    %     out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'H', out.h_pp_su, fluid_wf) ;
+    out.T_pp_su = min(x(4), CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-0.0001);
     out.DT_sc = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-out.T_pp_su;
+    %if x(4) ~= 0
+        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', out.T_pp_su, fluid_wf);
+    %else
+        %out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
+    %end
+    out.DT_sc = x(4);
 elseif strcmp(param.solverType, 'DTsc_imposed')
     out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc;
     if param.DT_sc ~= 0
@@ -51,44 +58,10 @@ out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',out.h_recc
 out.Mass.name{1,i_mass} = 'M_aux_pp_ex';
 
 % --------------------------------------------------------------------------------
-% RECUPERATOR CS------------------------------------------------------------------
-% --------------------------------------------------------------------------------
-
-out.Q_dot_rec_bis = x(3);
-out.h_ev_su = min(out.h_recc_su + x(3)/out.m_dot_wf, CoolProp.PropsSI('H', 'P', out.P_recc_su, 'T', T_htf_su, fluid_wf));
-out.P_ev_su = out.P_recc_su;
-out.T_ev_su = CoolProp.PropsSI('T', 'P', out.P_ev_su, 'H', out.h_ev_su, fluid_wf);
-
-i_mass = i_mass + 1;
-out.Mass.value(1,i_mass) = param.V_aux_recc_ex*CoolProp.PropsSI('D','H',out.h_ev_su,'P',out.P_ev_su,fluid_wf);
-out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
-
-
-
-% --------------------------------------------------------------------------------
-% EVAPORATOR ---------------------------------------------------------------------
-% --------------------------------------------------------------------------------
-[out_EV, TS_EV] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_ev_su, out.h_ev_su, out.m_dot_wf , param.EV);
-out.Q_dot_ev = out_EV.Q_dot_tot;
-out.T_htf_ev_ex = out_EV.T_h_ex;
-out.h_htf_ev_ex = out_EV.h_h_ex;
-out.M_ev = out_EV.M_c;
-out.flag_ev = out_EV.flag;
-out.time_ev = out_EV.time;
-out.pinch_ev = out_EV.pinch;
-i_flag = i_flag+1;
-out.flag.value(1,i_flag) = out_EV.flag;
-out.flag.name{1,i_flag} = 'flag_ev';
-i_mass = i_mass+1;
-out.Mass.value(1,i_mass) = out.M_ev;
-out.Mass.name{1,i_mass} = 'M_ev';
-out.P_dphp_su = out.P_ev_su;
-out.T_dphp_su = out_EV.T_c_ex;
-out.h_dphp_su = out_EV.h_c_ex;
-
-% --------------------------------------------------------------------------------
 % LossesHP -----------------------------------------------------------------------
 % --------------------------------------------------------------------------------
+out.h_dphp_su = max(CoolProp.PropsSI('H', 'P', out.P_recc_su, 'Q', 0, fluid_wf),min(x(3), CoolProp.PropsSI('H', 'P', out.P_recc_su, 'T', T_htf_su, fluid_wf)));
+out.P_dphp_su = out.P_recc_su;
 param.LossesHP.type_in = 'su';
 [out_LossesHP, TS_LossesHP] = LossesModel(fluid_wf, out.P_dphp_su, out.h_dphp_su, out.m_dot_wf, T_amb, param.LossesHP);
 out.dphp = out_LossesHP.dp;
@@ -105,6 +78,7 @@ i_mass = i_mass + 1;
 out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',out.h_exp_su,'P',out.P_exp_su,fluid_wf);
 out.Mass.name{1,i_mass} = 'M_aux_ev_ex';
 
+
 % --------------------------------------------------------------------------------
 % LossesLP -----------------------------------------------------------------------
 % --------------------------------------------------------------------------------
@@ -112,6 +86,7 @@ param.LossesLP.type_in = 'ex';
 [out_LossesLP, TS_LossesLP] = LossesModel(fluid_wf, out.P_pp_su, out.h_pp_su, out.m_dot_wf, T_amb, param.LossesLP);
 out.dplp = out_LossesLP.dp;
 out.Q_dot_lp = out_LossesLP.Q_dot;
+out.flag_lossesLP = out_LossesLP.flag;
 out.P_dplp_su = out_LossesLP.P_su;
 out.T_dplp_su = out_LossesLP.T_su;
 out.h_dplp_su = out_LossesLP.h_su;
@@ -124,7 +99,7 @@ out.flag.name{1,i_flag} = 'flag_dplp';
 % EXPANDER -----------------------------------------------------------------------
 % --------------------------------------------------------------------------------
 out.rp_exp = out.P_exp_su/out.P_rech_su;
-[out_EXP, TS_EXP] = ExpanderModel2(fluid_wf, out.P_exp_su, out.h_exp_su, out.m_dot_wf, out.P_rech_su, T_amb, param.EXP);
+[out_EXP, TS_EXP] = ExpModel_2_SemiEmp(fluid_wf, out.P_exp_su, out.h_exp_su, out.m_dot_wf, out.P_rech_su, T_amb, param.EXP);
 out.N_exp_bis = out_EXP.N_exp;
 out.W_dot_exp = out_EXP.W_dot;
 out.Q_dot_exp = out_EXP.Q_dot_amb;
@@ -147,11 +122,11 @@ i_mass = i_mass + 1;
 out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',out.h_rech_su,'P',out.P_rech_su,fluid_wf);
 out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
 
-
-
 % --------------------------------------------------------------------------------
-% RECUPERATOR HS------------------------------------------------------------------
+% RECUPERATOR --------------------------------------------------------------------
 % --------------------------------------------------------------------------------
+param.REC.port_h = 'su';
+param.REC.port_c = 'su';
 [out_REC, TS_REC] = HexModel(fluid_wf, out.P_rech_su, out.h_rech_su, out.m_dot_wf, fluid_wf, out.P_recc_su, out.h_recc_su, out.m_dot_wf, param.REC);
 out.Q_dot_rec = out_REC.Q_dot_tot;
 out.M_rech = out_REC.M_h;
@@ -171,14 +146,46 @@ out.Mass.name{1,i_mass} = 'M_rech';
 out.h_cd_su = out_REC.h_h_ex;
 out.P_cd_su = out.P_rech_su;
 out.T_cd_su = out_REC.T_h_ex;    
+out.h_ev_su = out_REC.h_c_ex;
+out.P_ev_su = out.P_recc_su;
+out.T_ev_su = out_REC.T_c_ex;
 
 i_mass = i_mass + 1;
 out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',out.h_cd_su,'P',out.P_cd_su,fluid_wf);
 out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
+i_mass = i_mass + 1;
+out.Mass.value(1,i_mass) = param.V_aux_recc_ex*CoolProp.PropsSI('D','H',out.h_ev_su,'P',out.P_ev_su,fluid_wf);
+out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
+
+% --------------------------------------------------------------------------------
+% EVAPORATOR ---------------------------------------------------------------------
+% --------------------------------------------------------------------------------
+param.EV.port_h = 'su';
+param.EV.port_c = 'su';
+[out_EV, TS_EV] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_ev_su, out.h_ev_su, out.m_dot_wf , param.EV);
+out.Q_dot_ev = out_EV.Q_dot_tot;
+out.T_htf_ev_ex = out_EV.T_h_ex;
+out.h_htf_ev_ex = out_EV.h_h_ex;
+out.M_ev = out_EV.M_c;
+out.flag_ev = out_EV.flag;
+out.time_ev = out_EV.time;
+out.pinch_ev = out_EV.pinch;
+i_flag = i_flag+1;
+out.flag.value(1,i_flag) = out_EV.flag;
+out.flag.name{1,i_flag} = 'flag_ev';
+i_mass = i_mass+1;
+out.Mass.value(1,i_mass) = out.M_ev;
+out.Mass.name{1,i_mass} = 'M_ev';
+out.h_ev_ex = out_EV.h_c_ex;
+out.T_ev_ex = out_EV.T_c_ex;
+out.P_ev_ex = out.P_ev_su;
+
 
 % --------------------------------------------------------------------------------
 % CONDENSER ----------------------------------------------------------------------
 % --------------------------------------------------------------------------------
+param.CD.port_h = 'su';
+param.CD.port_c = 'su';
 [out_CD, TS_CD] = HexModel(fluid_wf, out.P_cd_su, out.h_cd_su, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
 out.Q_dot_cd = out_CD.Q_dot_tot;
 out.T_ctf_cd_ex = out_CD.T_c_ex;
@@ -216,7 +223,7 @@ elseif abs((out.h_pp_su-CoolProp.PropsSI('H','Q',0,'P',out.P_pp_su,fluid_wf))/ou
     out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',out.P_pp_su,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',out.P_pp_su,fluid_wf)));
     out.Mass.name{1,i_mass} = 'M_liq_receiver';
     out.Receiver_type = 2;
-    out.level_receiver = out.Mass.value(1,i_mass)/param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',out.P_pp_su,fluid_wf);
+    out.level_receiver = (out.Mass.value(1,i_mass)-param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',out.P_pp_su,fluid_wf))/((param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',out.P_pp_su,fluid_wf))-(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',out.P_pp_su,fluid_wf)));
 else
     i_mass = i_mass + 1;
     out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',out.P_pp_su,fluid_wf);
@@ -233,30 +240,17 @@ out.eff_ORC_gross = out.W_dot_exp/out.Q_dot_ev;
 out.eff_ORC_net = out.W_dot_net/out.Q_dot_ev;
 
 % RESIDUALS and RESULTS
-out.res_ORC_Hsu = (1 - out.h_dplp_su/out.h_cd_ex);
-
+out.res_ORC_H_cd_ex = (1 - out.h_dplp_su/out.h_cd_ex);
+out.res_ORC_H_ev_ex = (1 - out.h_dphp_su/out.h_ev_ex);
 out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
-
-if x(3) == 0 && out.Q_dot_rec == 0
-    out.res_ORC_Qdot_rec = 0;
-elseif x(3) == 0 && out.Q_dot_rec ~= 0
-    out.res_ORC_Qdot_rec = 1;
-elseif x(3) ~= 0 && out.Q_dot_rec == 0
-    out.res_ORC_Qdot_rec = 1;
-else
-    out.res_ORC_Qdot_rec = 1 - x(3)/out.Q_dot_rec;
-end
 
 if strcmp(param.solverType, 'M_imposed')
     out.res_ORC_M = (1 - out.M_tot/param.M_tot);
-    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_H_cd_ex     out.res_ORC_H_ev_ex    out.res_ORC_M];
 elseif strcmp(param.solverType, 'DTsc_imposed')
-     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_H_cd_ex     out.res_ORC_H_ev_ex];
 end
 
-% if any(out.flag.value < 0)
-%     out.res_vec  = 1e5*out.res_vec;
-% end
 out.res  = norm(out.res_vec);
 out.x = x;
 

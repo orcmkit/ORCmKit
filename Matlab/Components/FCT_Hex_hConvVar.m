@@ -10,7 +10,7 @@ function out = FCT_Hex_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_do
 % It evaluates a multi-zone heat exchanger model with variable heat transfer coefficients
 % while assuming a given heat transfer "Q_dot".
 
-out = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, param); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
+out = HEX_profile_2(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, param); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
 [out.hConv_h, out.hConv_c, out.DTlog, out.eff_h, out.eff_c, out.A_h, out.A_c, out.U] = deal(NaN*ones(1,length(out.H_h_vec)-1));
 for j = 1:length(out.T_h_vec)-1
     % Hot side heat transfer coefficient

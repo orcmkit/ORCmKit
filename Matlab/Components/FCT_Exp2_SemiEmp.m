@@ -46,7 +46,7 @@ out.rho_in = out.rho_su2/r_v_in;
 try
     out.P_in = CoolProp.PropsSI('P','D',out.rho_in,'S',out.s_su2,fluid);
 catch
-    delta = 0.0001;
+    delta = 0.001;
     out.P_in = 0.5*CoolProp.PropsSI('P','D',out.rho_in*(1+delta),'S',out.s_su2,fluid)+0.5*CoolProp.PropsSI('P','D',out.rho_in*(1-delta),'S',out.s_su2,fluid);
 end
 out.h_in = CoolProp.PropsSI('H','D',out.rho_in,'P',out.P_in,fluid);

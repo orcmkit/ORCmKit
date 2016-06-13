@@ -1,4 +1,5 @@
 function [out, TS] = LossesModel(fluid, in_P, in_h, M_dot, T_amb, param)
+% fluid, in_P, in_h, M_dot, T_amb, param
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 %
@@ -60,10 +61,10 @@ function [out, TS] = LossesModel(fluid, in_P, in_h, M_dot, T_amb, param)
 if nargin == 0
     % Define a demonstration case if LossesModel.mat is not executed externally  
     fluid = 'R245fa';
-    in_P = 4.2330e+05;
-    in_h = 2.4110e+05;    
-    M_dot = 0.0281;
-    T_amb = 291.0039;
+    in_P = 7.2841e+04; %1.2e+05;
+    in_h = 2.0871e+05; %CoolProp.PropsSI('H', 'Q', 0, 'P', in_P, fluid); %2.2121e+05;    
+    M_dot = 0.0760; %0.0281;
+    T_amb = 278.1500;
     path = 'C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power';
     DP_folder = [path '\PressureDrops\'];
     load([DP_folder, 'ParametersCalibration_DP.mat'])
@@ -87,7 +88,7 @@ end
 if not(isfield(param,'h_max'))
     param.h_max =  CoolProp.PropsSI('H','P',4e6,'T',500,fluid);
 end
-
+param.P_max = CoolProp.PropsSI('Pcrit','H',in_h,'P',in_P,fluid)-1e3;
 switch param.modelType
     case 'CstDP'
         if strcmp(param.type_in, 'su')
@@ -120,6 +121,7 @@ switch param.modelType
                 out.flag = 1;
             end
         elseif strcmp(param.type_in, 'ex')
+            
             x0 = [in_h in_P];
             ub = 1.5*x0;
             f = @(x) MdotDP_res(x, ub, in_h, in_P, M_dot, T_amb, fluid, param);
@@ -144,15 +146,27 @@ switch param.modelType
                 out.flag = 1;
             end
         elseif strcmp(param.type_in, 'ex')
-            x0 = [in_h in_P];
-            ub = 1.5*x0;
-            f = @(x) PhiDP_res(x, ub, in_h, in_P, M_dot, T_amb, fluid, param);
-            options = optimoptions('fsolve','Display','none');
-            x = fsolve(f, x0./ub,options);            
-            out = PhiDP(x(1)*ub(1), x(2)*ub(2), M_dot, T_amb, fluid, param);
-            if norm(f(x)) < 1e-3 && out.h_ex > param.h_min && out.h_ex < param.h_max
-                out.flag = 1;
-            else
+            k_0 = [1.5 1.1 2 3 4 5 7 10];
+            stop = 0;
+            k = 1;
+            try
+                while not(stop) && k <= length(k_0)
+                    x0 = [in_h k_0(k)*in_P];
+                    ub = x0;
+                    f = @(x) PhiDP_res(x, ub, in_h, in_P, M_dot, T_amb, fluid, param);
+                    options = optimoptions('fsolve','Display','none');
+                    x = fsolve(f, x0./ub,options);
+                    out = PhiDP(x(1)*ub(1), x(2)*ub(2), M_dot, T_amb, fluid, param);
+                    if norm(f(x)) < 1e-3 && out.h_ex > param.h_min && out.h_ex < param.h_max
+                        out.flag = 1;
+                        stop = 1;
+                    else
+                        out.flag = -1;
+                        stop = 0;
+                    end
+                    k = k+1;
+                end
+            catch
                 out.flag = -1;
             end
         end
@@ -239,7 +253,7 @@ res(2) = P_ex-out.P_ex;
 end
 
 function out = PhiDP(h_su, P_su, M_dot, T_amb, fluid, param)
-out.P_su = P_su;
+out.P_su = min(param.P_max,P_su);
 out.h_su = h_su;
 if strcmp(param.type_phi, 'phi_su')
     phi = M_dot^2/CoolProp.PropsSI('D','P',out.P_su,'H',out.h_su,fluid);

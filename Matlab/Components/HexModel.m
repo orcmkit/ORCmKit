@@ -564,14 +564,16 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0
             
             % Entropy vector calculation
             [out.s_h_vec, out.s_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
-            if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
-                for i = 1: length(out.H_h_vec)
-                    out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+            if param.generateTS
+                if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
+                    for i = 1: length(out.H_h_vec)
+                        out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+                    end
                 end
-            end
-            if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
-                for i = 1: length(out.H_c_vec)
-                    out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+                if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
+                    for i = 1: length(out.H_c_vec)
+                        out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+                    end
                 end
             end
             
@@ -698,17 +700,18 @@ else
     
     % Entropy calculation
     [out.s_h_vec, out.s_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
-    if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
-        for i = 1: length(out.H_h_vec)
-            out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+    if param.generateTS
+        if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
+            for i = 1: length(out.H_h_vec)
+                out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+            end
+        end
+        if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
+            for i = 1: length(out.H_c_vec)
+                out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+            end
         end
     end
-    if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
-        for i = 1: length(out.H_c_vec)
-            out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
-        end
-    end
-    
     % Mass calculation
     out.V_h_vec = param.V_h_tot*(out.Qdot_vec./out.Q_dot_tot);
     out.V_c_vec = param.V_c_tot*(out.Qdot_vec./out.Q_dot_tot);

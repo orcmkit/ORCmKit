@@ -94,7 +94,7 @@ s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
 rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
 h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
 
-if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0,fluid)
+if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid)
     x0 = 0.85*T_su+0.15*T_amb;
     ub = 2*x0;
     options = optimset('Display','off');

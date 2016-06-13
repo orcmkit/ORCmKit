@@ -169,6 +169,8 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'H') %% CASE 2 : HOT FLUI
         else
             H_c_vec = [h_c_su  h_c_v  h_c_ex];
         end
+    else
+        H_c_vec = [h_c_su  h_c_ex]; %in all other cases (should never happen)
     end
     
     % if hot fluid incompressible (T as input), only one cell of liquid phase  
@@ -231,6 +233,8 @@ elseif strcmp(param.type_h,'H') && strcmp(param.type_c,'T')  %% CASE 3 : HOT FLU
         else
             H_h_vec = [h_h_ex  h_h_v  h_h_su];
         end
+    else
+        H_h_vec = [h_h_ex  h_h_su]; %in all other cases (should never happen)        
     end
     
     % if cold fluid incompressible (T as input), only one cell of liquid phase  

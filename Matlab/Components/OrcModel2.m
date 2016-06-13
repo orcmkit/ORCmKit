@@ -143,14 +143,14 @@ if param.display
     fprintf('\n');
     dispstat('','init')
 end
-P_cd_lb = max(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su-10, fluid_wf), CoolProp.PropsSI('P_min', 'Q', 0, 'T', 273.15, fluid_wf));
+P_cd_lb = max(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su-20, fluid_wf), CoolProp.PropsSI('P_min', 'Q', 0, 'T', 273.15, fluid_wf));
 P_ev_ub = CoolProp.PropsSI('P', 'Q', 0, 'T', min(CoolProp.PropsSI('Tcrit', 'Q', 0, 'T',273, fluid_wf)-2, T_htf_su-1), fluid_wf);
 rp_max = P_ev_ub/P_cd_lb;
 rp_min = min(1.01, rp_max);
 P_ev_lb = rp_min*P_cd_lb;
 P_cd_ub = P_ev_ub/rp_min;
 Q_dot_rec_lb = 0;
-P_cd_guess0 = linspace(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su, fluid_wf),CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su+30, fluid_wf),param.init(1) );
+P_cd_guess0 = linspace(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su-5, fluid_wf),CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su+25, fluid_wf),param.init(1) );
 x_rp_guess0 =  linspace(0.1, 0.9, param.init(2));
 x_Q_dot_rec_guess0 = linspace(0.1, 0.5, param.init(3));
 if strcmp(param.solverType, 'M_imposed')
@@ -269,7 +269,8 @@ if isfield(param, 'x0')
         if param.display
             dispstat(['x0 evaluation: : ' num2str(index) '/' num2str(length(P_cd_guess_vec)+length(x0_vec))])
         end
-        out_x0 = OrganicRankineCycle(x0_matrix(k,:)./ub0_matrix(k,:), lb0_matrix(k,:), ub0_matrix(k,:), fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+        param.eval_type = 'fast';
+        out_x0 = FCT_ORC_Ext_Npp_Nexp(x0_matrix(k,:)./ub0_matrix(k,:), lb0_matrix(k,:), ub0_matrix(k,:), fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
         if any(out_x0.flag.value < 0) || out_x0.res > 1
             res_x0(k) = NaN;
         else
@@ -341,11 +342,7 @@ if not(isempty(res_ordered))
     k= 1;
     out_ORC_best.res = 1e10;
     stop = 0;
-    %options_fsolve = optimoptions('fsolve', 'Algorithm', 'Levenberg-Marquardt', 'Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
-    %options_pattsearch = psoptimset('Display','iter','TolX', 1e-8, 'TolFun', 1e-8, 'TolMesh', 1e-8, 'MaxIter', 1e4, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
-    %options_fminsearch = optimset('Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e9, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
-    %options_fmincon = optimset('Disp','iter','Algorithm','interior-point','Hessian','bfgs','GradObj','off','AlwaysHonorConstraints','bounds','UseParallel',true,'FinDiffType','forward','SubproblemAlgorithm','ldl-factorization','GradConstr','off','InitBarrierParam',1e-6,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
-    options_fmincon = optimset('Disp','none','Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
+    options_fmincon = optimset('Disp','iter','Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
     while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
         
         if strcmp(param.solverType, 'DTsc_imposed')
@@ -459,639 +456,639 @@ end
 
 
 
-function [out, TS] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
-x = max(x, lb./ub);
-x = min(x,ones(1,length(x)));
-x = x.*ub;
-x(1) = max(x(1), 1.001*x(2));
-out.rp_pp = x(1)/x(2);
-i_flag = 1;
-i_mass = 1;
-
-% --------------------------------------------------------------------------------
-% PUMP ---------------------------------------------------------------------------
-% --------------------------------------------------------------------------------
-out.P_pp_su = x(2);
-if strcmp(param.solverType, 'M_imposed')
-    out.h_pp_su = x(4);
-    out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'H', out.h_pp_su, fluid_wf) ;
-    out.DT_sc = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-out.T_pp_su;
-elseif strcmp(param.solverType, 'DTsc_imposed')
-    out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc;
-    if param.DT_sc ~= 0
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
-    else
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
-    end
-    out.DT_sc = param.DT_sc;
-end
-[out_PP, TS_PP] = PumpModel(out.P_pp_su, out.h_pp_su, x(1), fluid_wf, N_pp, param.PP);
-out.M_pp = out_PP.M;
-out.m_dot_wf = out_PP.m_dot;
-out.W_dot_pp = out_PP.W_dot;
-out.eps_is_pp = out_PP.epsilon_is;
-out.eps_vol_pp = out_PP.epsilon_vol;
-out.time_pp = out_PP.time;
-out.flag_pp = out_PP.flag;
-
-T_prev = out_PP.T_ex;
-h_prev = out_PP.h_ex;
-P_prev = x(1);
-
-out.flag.value(1,i_flag) = out_PP.flag;
-out.flag.name{1,i_flag} = 'flag_pp';
-out.Mass.value(1,i_mass) = out_PP.M;
-out.Mass.name{1,i_mass} = 'M_pp';
-
-TS.PP = TS_PP;
-
-if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_pp_ex';
-end
-
-% RECUPERATOR (cold side)
-if isfield(param, 'REC')
-    out.P_recc_su = P_prev;
-    out.T_recc_su = out_PP.T_ex;
-    out.h_recc_su = out_PP.h_ex;
-    out.Q_dot_rec_bis = x(3);
-    h_prev = min(out.h_recc_su + x(3)/out.m_dot_wf, CoolProp.PropsSI('H', 'P', out.P_recc_su, 'T', T_htf_su, fluid_wf));
-    P_prev = out.P_recc_su;
-    T_prev = CoolProp.PropsSI('T', 'P', P_prev, 'H', h_prev, fluid_wf);
-    if isfield(param, 'V_aux_recc_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_recc_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
-    end
-end
-
-% PREHEATER &/ EVAPORATOR
-if isfield(param, 'PRE')
-    out.P_pre_su = P_prev;
-    out.T_pre_su = T_prev;
-    out.h_pre_su = h_prev;
-    pre_ev = HexSeries(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_pre_su, out.h_pre_su, out.m_dot_wf, param.PRE, param.EV);
-    TS_PRE = pre_ev.ts1;
-    out.flag_pre_ev = pre_ev.flag;
-    out.Q_dot_pre = pre_ev.hex1.Q_dot_tot;
-    out.T_htf_pre_ex = pre_ev.hex1.T_h_ex;
-    out.h_htf_pre_ex = pre_ev.hex1.h_h_ex;
-    out.flag_pre = pre_ev.hex1.flag;
-    out.pinch_pre = pre_ev.hex1.pinch;
-    out.M_pre = pre_ev.hex1.M_c;
-    out.time_pre = pre_ev.hex1.time;
-    out.h_ev_su = pre_ev.hex1.h_c_ex;
-    out.T_ev_su = pre_ev.hex1.T_c_ex;
-    out.P_ev_su = out.P_pre_su;
-    TS_EV = pre_ev.ts2;
-    out.Q_dot_ev = pre_ev.hex2.Q_dot_tot;
-    out.T_htf_ev_ex = pre_ev.hex2.T_h_ex;
-    out.h_htf_ev_ex = pre_ev.hex2.h_h_ex;
-    out.flag_ev = pre_ev.hex2.flag;
-    out.pinch_ev = pre_ev.hex2.pinch;
-    out.M_ev = pre_ev.hex2.M_c;
-    out.time_ev = pre_ev.hex2.time;
-    Q_dot_in = out.Q_dot_ev + out.Q_dot_pre;
-    T_prev = pre_ev.hex2.T_c_ex;
-    h_prev = pre_ev.hex2.h_c_ex;
-    P_prev = out.P_ev_su;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = pre_ev.flag;
-    out.flag.name{1,i_flag} = 'flag_pre_ev';
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = pre_ev.hex1.flag;
-    out.flag.name{1,i_flag} = 'flag_pre';
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = pre_ev.hex2.flag;
-    out.flag.name{1,i_flag} = 'flag_ev';
-    
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_pre;
-    out.Mass.name{1,i_mass} = 'M_pre';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_ev;
-    out.Mass.name{1,i_mass} = 'M_ev';
-    TS.PRE = TS_PRE;
-    TS.EV = TS_EV;
-    
-else
-    out.P_ev_su = P_prev;
-    out.T_ev_su = T_prev;
-    out.h_ev_su = h_prev;
-    [out_EV, TS_EV] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_ev_su, out.h_ev_su, out.m_dot_wf , param.EV);
-    out.Q_dot_ev = out_EV.Q_dot_tot;
-    Q_dot_in = out.Q_dot_ev;
-    out.T_htf_ev_ex = out_EV.T_h_ex;
-    out.h_htf_ev_ex = out_EV.h_h_ex;
-    out.M_ev = out_EV.M_c;
-    out.flag_ev = out_EV.flag;
-    out.time_ev = out_EV.time;
-    out.pinch_ev = out_EV.pinch;
-    P_prev = out.P_ev_su;
-    T_prev = out_EV.T_c_ex;
-    h_prev = out_EV.h_c_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_EV.flag;
-    out.flag.name{1,i_flag} = 'flag_ev';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_ev;
-    out.Mass.name{1,i_mass} = 'M_ev';
-    TS.EV = TS_EV;
-    
-end
-
-% LossesHP
-if isfield(param, 'LossesHP')
-    out.P_dphp_su = P_prev;
-    out.T_dphp_su = T_prev;
-    out.h_dphp_su = h_prev;
-    param.LossesHP.type_in = 'su';
-    [out_LossesHP, TS_LossesHP] = LossesModel(fluid_wf, out.P_dphp_su, out.h_dphp_su, out.m_dot_wf, T_amb, param.LossesHP);
-    out.dphp = out_LossesHP.dp;
-    out.Q_dot_hp = out_LossesHP.Q_dot;
-    out.flag_lossesHP = out_LossesHP.flag;
-    T_prev = out_LossesHP.T_ex;
-    h_prev = out_LossesHP.h_ex;
-    P_prev = out_LossesHP.P_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_LossesHP.flag;
-    out.flag.name{1,i_flag} = 'flag_dphp';
-    TS.LossesHP = TS_LossesHP;
-    
-    if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_ev_ex';
-    end
-end
-
-% EXPANDER
-out.P_exp_su = P_prev;
-out.T_exp_su = T_prev;
-out.h_exp_su = h_prev;
-if isfield(param, 'LossesLP')
-    param.LossesLP.type_in = 'ex';
-    [out_LossesLP_bis, ~] = LossesModel(fluid_wf, x(2), out.h_pp_su, out.m_dot_wf, T_amb, param.LossesLP);
-    P_exp_ex = x(2)+out_LossesLP_bis.dp;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_LossesLP_bis.flag;
-    out.flag.name{1,i_flag} = 'flag_dplp_bis';
-else
-    P_exp_ex = x(2);
-end
-out.rp_exp = out.P_exp_su/P_exp_ex;
-[out_EXP, TS_EXP] = ExpanderModel2(fluid_wf, out.P_exp_su, out.h_exp_su, out.m_dot_wf, P_exp_ex, T_amb, param.EXP);
-out.N_exp_bis = out_EXP.N_exp;
-out.W_dot_exp = out_EXP.W_dot;
-out.Q_dot_exp = out_EXP.Q_dot_amb;
-out.M_exp = out_EXP.M;
-out.eps_vol_exp = out_EXP.FF;
-out.eps_is_exp = out_EXP.epsilon_is;
-out.flag_exp = out_EXP.flag;
-out.time_exp = out_EXP.time;
-T_prev = out_EXP.T_ex;
-h_prev = out_EXP.h_ex;
-P_prev = P_exp_ex;
-i_flag = i_flag+1;
-out.flag.value(1,i_flag) = out_EXP.flag;
-out.flag.name{1,i_flag} = 'flag_exp';
-i_mass = i_mass+1;
-out.Mass.value(1,i_mass) = out.M_exp;
-out.Mass.name{1,i_mass} = 'M_exp';
-TS.EXP = TS_EXP;
-
-if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
-end
-
-
-% RECUPERATOR (hot side)
-if isfield(param, 'REC')
-    out.P_rech_su = P_prev;
-    out.T_rech_su = T_prev;
-    out.h_rech_su = h_prev;
-    [out_REC, TS_REC] = HexModel(fluid_wf, out.P_rech_su, out.h_rech_su, out.m_dot_wf, fluid_wf, out.P_recc_su, out.h_recc_su, out.m_dot_wf, param.REC);
-    out.Q_dot_rec = out_REC.Q_dot_tot;
-    out.M_rech = out_REC.M_h;
-    out.M_recc = out_REC.M_c;
-    out.flag_rec = out_REC.flag;
-    out.time_rec = out_EXP.time;
-    out.pinch_rec = out_REC.pinch;
-    h_prev = out_REC.h_h_ex;
-    P_prev = out.P_rech_su;
-    T_prev = out_REC.T_h_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_REC.flag;
-    out.flag.name{1,i_flag} = 'flag_rec';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_recc;
-    out.Mass.name{1,i_mass} = 'M_recc';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_rech;
-    out.Mass.name{1,i_mass} = 'M_rech';
-    TS.REC = TS_REC;
-    
-end
-if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
-end
-
-% CONDENSER &/ SUBCOOLER
-if isfield(param, 'SUB')
-    out.P_cd_su = P_prev;
-    out.T_cd_su = T_prev;
-    out.h_cd_su = h_prev;
-    sub_cd = HexSeries(fluid_wf, out.P_cd_su, out.h_cd_su, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf, param.SUB, param.CD);
-    out.flag_sub_cd = sub_cd.flag;
-    out.Q_dot_cd = sub_cd.hex2.Q_dot_tot;
-    out.T_ctf_cd_ex = sub_cd.hex2.T_c_ex;
-    out.h_ctf_cd_ex = sub_cd.hex2.h_c_ex;
-    out.M_cd = sub_cd.hex2.M_h;
-    out.flag_cd = sub_cd.hex2.flag;
-    out.pinch_cd = sub_cd.hex2.pinch;
-    out.time_cd = sub_cd.hex2.time;
-    out.Q_dot_sub = sub_cd.hex1.Q_dot_tot;
-    out.T_ctf_cd_su = sub_cd.hex1.T_c_ex;
-    out.h_ctf_cd_su = sub_cd.hex1.h_c_ex;
-    out.M_sub = sub_cd.hex1.M_h;
-    out.flag_sub = sub_cd.hex1.flag;
-    out.pinch_sub = sub_cd.hex1.pinch;
-    out.time_sub = sub_cd.hex1.time;
-    out.h_sub_su = sub_cd.hex2.h_h_ex;
-    out.T_sub_su = sub_cd.hex2.T_h_ex;
-    out.P_sub_su = out.P_cd_su;
-    T_prev = sub_cd.hex1.T_h_ex;
-    h_prev = sub_cd.hex1.h_h_ex;
-    P_prev = out.P_sub_su;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = sub_cd.flag;
-    out.flag.name{1,i_flag} = 'flag_sub_cd';
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = sub_cd.hex1.flag;
-    out.flag.name{1,i_flag} = 'flag_sub';
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = sub_cd.hex2.flag;
-    out.flag.name{1,i_flag} = 'flag_cd';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_cd;
-    out.Mass.name{1,i_mass} = 'M_cd';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_sub;
-    out.Mass.name{1,i_mass} = 'M_sub';
-    TS.SUB = sub_cd.ts1;
-    TS.CD = sub_cd.ts2;
-else
-    out.P_cd_su = P_prev;
-    out.T_cd_su = T_prev;
-    out.h_cd_su = h_prev;
-    [out_CD, TS_CD] = HexModel(fluid_wf, out.P_cd_su, out.h_cd_su, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
-    out.Q_dot_cd = out_CD.Q_dot_tot;
-    out.T_ctf_cd_ex = out_CD.T_c_ex;
-    out.h_ctf_cd_ex = out_CD.h_c_ex;
-    out.M_cd = out_CD.M_h;
-    out.flag_cd = out_CD.flag;
-    out.time_cd = out_CD.time;
-    out.pinch_cd = out_CD.pinch;
-    if isfield(param.CD, 'W_dot_aux')
-        out.W_dot_cd = param.CD.W_dot_aux;
-    else
-        out.W_dot_cd = 0;
-    end
-    
-    P_prev = out.P_cd_su;
-    T_prev = out_CD.T_h_ex;
-    h_prev = out_CD.h_h_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_CD.flag;
-    out.flag.name{1,i_flag} = 'flag_cd';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out.M_cd;
-    out.Mass.name{1,i_mass} = 'M_cd';
-    TS.CD = TS_CD;
-    
-end
-
-% LossesLP
-if isfield(param, 'LossesLP')
-    out.T_dplp_su = T_prev;
-    out.h_dplp_su = h_prev;
-    out.P_dplp_su = P_prev;
-    param.LossesLP.type_in = 'su';
-    [out_LossesLP, TS_LossesLP] = LossesModel(fluid_wf, out.P_dplp_su, out.h_dplp_su, out.m_dot_wf, T_amb, param.LossesLP);
-    out.dplp = out_LossesLP.dp;
-    out.Q_dot_lp = out_LossesLP.Q_dot;
-    out.flag_lossesLP = out_LossesLP.flag;
-    T_prev = out_LossesLP.T_ex;
-    h_prev = out_LossesLP.h_ex;
-    P_prev = out_LossesLP.P_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_LossesLP.flag;
-    out.flag.name{1,i_flag} = 'flag_dplp';
-    TS.LossesLP = TS_LossesLP;
-end
-
-% LIQUID RECEIVER AND PIPES
-if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the liquid receiver if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
-end
-if isfield(param, 'V_liq_rec')
-    if abs((h_prev-CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf))/h_prev)<1e-3
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
-        out.Mass.name{1,i_mass} = 'M_liq_receiver';
-    else
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_liq_receiver';
-    end
-end
-out.M_tot = sum(out.Mass.value);
-out.DT_bis =  CoolProp.PropsSI('T', 'P', P_prev, 'Q', 0, fluid_wf)-T_prev;
-
-
-% ORC PERFORAMANCE
-out.W_dot_net = out.W_dot_exp - out.W_dot_pp - out.W_dot_cd;
-out.eff_ORC_gross = out.W_dot_exp/Q_dot_in;
-out.eff_ORC_net = out.W_dot_net/Q_dot_in;
-
-% RESIDUALS and RESULTS
-out.res_ORC_Hsu = (1 - out.h_pp_su/h_prev);
-
-out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
-
-if x(3) == 0 && out.Q_dot_rec == 0
-    out.res_ORC_Qdot_rec = 0;
-elseif x(3) == 0 && out.Q_dot_rec ~= 0
-    out.res_ORC_Qdot_rec = 1;
-elseif x(3) ~= 0 && out.Q_dot_rec == 0
-    out.res_ORC_Qdot_rec = 1;
-else
-    out.res_ORC_Qdot_rec = 1 - x(3)/out.Q_dot_rec;
-end
-
-if strcmp(param.solverType, 'M_imposed')
-    out.res_ORC_M = (1 - out.M_tot/param.M_tot);
-    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
-elseif strcmp(param.solverType, 'DTsc_imposed')
-    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
-end
-
-if any(out.flag.value < 0)
-    out.res_vec  = 1e5*out.res_vec;
-end
-out.res  = norm(out.res_vec);
-
-out.x = x;
-
-% Construction of the TS variable
-TS.cycle.s = TS.PP.s;
-TS.cycle.T = TS.PP.T;
-if isfield(param, 'REC')
-    TS.cycle.s = [TS.cycle.s  TS.REC.s_c];
-    TS.cycle.T = [TS.cycle.T  TS.REC.T_c];
-end
-if isfield(param, 'PRE')
-    TS.cycle.s = [TS.cycle.s  TS.PRE.s_c];
-    TS.cycle.T = [TS.cycle.T  TS.PRE.T_c];
-end
-TS.cycle.s = [TS.cycle.s  TS.EV.s_c];
-TS.cycle.T = [TS.cycle.T  TS.EV.T_c];
-if isfield(param, 'LossesHP')
-    TS.cycle.s = [TS.cycle.s TS.LossesHP.s];
-    TS.cycle.T = [TS.cycle.T TS.LossesHP.T];
-end
-TS.cycle.s = [TS.cycle.s  TS.EXP.s];
-TS.cycle.T = [TS.cycle.T  TS.EXP.T];
-if isfield(param, 'REC')
-    TS.cycle.s = [TS.cycle.s  fliplr(TS.REC.s_h)];
-    TS.cycle.T = [TS.cycle.T  fliplr(TS.REC.T_h)];
-end
-TS.cycle.s = [TS.cycle.s fliplr(TS.CD.s_h)];
-TS.cycle.T = [TS.cycle.T fliplr(TS.CD.T_h)];
-if isfield(param, 'SUB')
-    TS.cycle.s = [TS.cycle.s  fliplr(TS.SUB.s_h)];
-    TS.cycle.T = [TS.cycle.T  fliplr(TS.SUB.T_h)];
-end
-if isfield(param, 'LossesLP')
-    TS.cycle.s = [TS.cycle.s TS.LossesLP.s];
-    TS.cycle.T = [TS.cycle.T TS.LossesLP.T];
-end
-
-out = orderfields(out);
-end
-
-function [out, TS] = OrganicRankineCycle_Fast(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
-TS = NaN;
-x = max(x, lb./ub);
-x = min(x,ones(1,length(x)));
-x = x.*ub;
-x(1) = max(x(1), 1.001*x(2));
-i_flag = 1;
-i_mass = 1;
-
-% --------------------------------------------------------------------------------
-% PUMP ---------------------------------------------------------------------------
-% --------------------------------------------------------------------------------
-out.P_pp_su = x(2);
-if strcmp(param.solverType, 'M_imposed')
-    out.h_pp_su = x(4);
-elseif strcmp(param.solverType, 'DTsc_imposed')
-    if param.DT_sc ~= 0
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
-    else
-        out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
-    end
-end
-[out_PP, ~] = PumpModel(x(2), out.h_pp_su, x(1), fluid_wf, N_pp, param.PP);
-out.m_dot_wf = out_PP.m_dot;
-h_prev = out_PP.h_ex;
-P_prev = x(1);
-
-out.flag.value(1,i_flag) = out_PP.flag;
-out.flag.name{1,i_flag} = 'flag_pp';
-out.Mass.value(1,i_mass) = out_PP.M;
-out.Mass.name{1,i_mass} = 'M_pp';
-
-
-if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_pp_ex';
-end
-
-% RECUPERATOR (cold side)
-if isfield(param, 'REC')
-    h_recc_su = h_prev;
-    P_recc_su = P_prev;
-    h_prev = min(h_prev + x(3)/out.m_dot_wf, CoolProp.PropsSI('H', 'P', P_prev, 'T', T_htf_su, fluid_wf));
-    if isfield(param, 'V_aux_recc_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_recc_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
-    end
-end
-
-%EVAPORATOR
-[out_EV, ~] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, P_prev,h_prev, out.m_dot_wf , param.EV);
-h_prev = out_EV.h_c_ex;
-i_flag = i_flag+1;
-out.flag.value(1,i_flag) = out_EV.flag;
-out.flag.name{1,i_flag} = 'flag_ev';
-i_mass = i_mass+1;
-out.Mass.value(1,i_mass) = out_EV.M_c;
-out.Mass.name{1,i_mass} = 'M_ev';
-
-
-% LossesHP
-if isfield(param, 'LossesHP')
-    param.LossesHP.type_in = 'su';
-    [out_LossesHP, ~] = LossesModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, T_amb, param.LossesHP);
-    h_prev = out_LossesHP.h_ex;
-    P_prev = out_LossesHP.P_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_LossesHP.flag;
-    out.flag.name{1,i_flag} = 'flag_dphp';
-    
-    if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_aux_ev_ex';
-    end
-end
-
-% EXPANDER
-if isfield(param, 'LossesLP')
-    param.LossesLP.type_in = 'ex';
-    [out_LossesLP_bis, ~] = LossesModel(fluid_wf, x(2), out.h_pp_su, out.m_dot_wf, T_amb, param.LossesLP);
-    P_exp_ex = x(2)+out_LossesLP_bis.dp;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_LossesLP_bis.flag;
-    out.flag.name{1,i_flag} = 'flag_dplp_bis';
-else
-    P_exp_ex = x(2);
-end
-[out_EXP, ~] = ExpanderModel2(fluid_wf, P_prev, h_prev, out.m_dot_wf, P_exp_ex, T_amb, param.EXP);
-out.N_exp_bis = out_EXP.N_exp;
-T_prev = out_EXP.T_ex;
-h_prev = out_EXP.h_ex;
-P_prev = P_exp_ex;
-i_flag = i_flag+1;
-out.flag.value(1,i_flag) = out_EXP.flag;
-out.flag.name{1,i_flag} = 'flag_exp';
-i_mass = i_mass+1;
-out.Mass.value(1,i_mass) = out_EXP.M;
-out.Mass.name{1,i_mass} = 'M_exp';
-
-if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
-end
-
-
-% RECUPERATOR (hot side)
-if isfield(param, 'REC')
-    [out_REC, ~] = HexModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, fluid_wf, P_recc_su, h_recc_su, out.m_dot_wf, param.REC);
-    h_prev = out_REC.h_h_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_REC.flag;
-    out.flag.name{1,i_flag} = 'flag_rec';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out_REC.M_c;
-    out.Mass.name{1,i_mass} = 'M_recc';
-    i_mass = i_mass+1;
-    out.Mass.value(1,i_mass) = out_REC.M_h;
-    out.Mass.name{1,i_mass} = 'M_rech';
-    
-end
-if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
-end
-
-% CONDENSER
-
-[out_CD, ~] = HexModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
-
-out.M_cd = out_CD.M_h;
-h_prev = out_CD.h_h_ex;
-i_flag = i_flag+1;
-out.flag.value(1,i_flag) = out_CD.flag;
-out.flag.name{1,i_flag} = 'flag_cd';
-i_mass = i_mass+1;
-out.Mass.value(1,i_mass) = out_CD.M_h;
-out.Mass.name{1,i_mass} = 'M_cd';
-
-% LossesLP
-if isfield(param, 'LossesLP')
-    param.LossesLP.type_in = 'su';
-    [out_LossesLP, ~] = LossesModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, T_amb, param.LossesLP);
-    h_prev = out_LossesLP.h_ex;
-    P_prev = out_LossesLP.P_ex;
-    i_flag = i_flag+1;
-    out.flag.value(1,i_flag) = out_LossesLP.flag;
-    out.flag.name{1,i_flag} = 'flag_dplp';
-end
-
-% LIQUID RECEIVER AND PIPES
-if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the liquid receiver if volume specified
-    i_mass = i_mass + 1;
-    out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-    out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
-end
-if isfield(param, 'V_liq_rec')
-    if abs((h_prev-CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf))/h_prev)<1e-2
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
-        out.Mass.name{1,i_mass} = 'M_liq_receiver';
-    else
-        i_mass = i_mass + 1;
-        out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
-        out.Mass.name{1,i_mass} = 'M_liq_receiver';
-    end
-end
-
-out.M_tot = sum(out.Mass.value);
-
-% RESIDUALS and RESULTS
-out.res_ORC_Hsu = (1 - out.h_pp_su/h_prev);
-
-out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
-
-if x(3) == 0 && out_REC.Q_dot_tot == 0
-    out.res_ORC_Qdot_rec = 0;
-elseif x(3) == 0 && out_REC.Q_dot_tot ~= 0
-    out.res_ORC_Qdot_rec = 1;
-elseif x(3) ~= 0 && out_REC.Q_dot_tot == 0
-    out.res_ORC_Qdot_rec = 1;
-else
-    out.res_ORC_Qdot_rec = 1 - x(3)/out_REC.Q_dot_tot;
-end
-
-if strcmp(param.solverType, 'M_imposed')
-    out.res_ORC_M = (1 - out.M_tot/param.M_tot);
-    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
-elseif strcmp(param.solverType, 'DTsc_imposed')
-    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
-end
-
+% function [out, TS] = OrganicRankineCycle(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+% x = max(x, lb./ub);
+% x = min(x,ones(1,length(x)));
+% x = x.*ub;
+% x(1) = max(x(1), 1.001*x(2));
+% out.rp_pp = x(1)/x(2);
+% i_flag = 1;
+% i_mass = 1;
+% 
+% % --------------------------------------------------------------------------------
+% % PUMP ---------------------------------------------------------------------------
+% % --------------------------------------------------------------------------------
+% out.P_pp_su = x(2);
+% if strcmp(param.solverType, 'M_imposed')
+%     out.h_pp_su = x(4);
+%     out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'H', out.h_pp_su, fluid_wf) ;
+%     out.DT_sc = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-out.T_pp_su;
+% elseif strcmp(param.solverType, 'DTsc_imposed')
+%     out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc;
+%     if param.DT_sc ~= 0
+%         out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
+%     else
+%         out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
+%     end
+%     out.DT_sc = param.DT_sc;
+% end
+% [out_PP, TS_PP] = PumpModel(out.P_pp_su, out.h_pp_su, x(1), fluid_wf, N_pp, param.PP);
+% out.M_pp = out_PP.M;
+% out.m_dot_wf = out_PP.m_dot;
+% out.W_dot_pp = out_PP.W_dot;
+% out.eps_is_pp = out_PP.epsilon_is;
+% out.eps_vol_pp = out_PP.epsilon_vol;
+% out.time_pp = out_PP.time;
+% out.flag_pp = out_PP.flag;
+% 
+% T_prev = out_PP.T_ex;
+% h_prev = out_PP.h_ex;
+% P_prev = x(1);
+% 
+% out.flag.value(1,i_flag) = out_PP.flag;
+% out.flag.name{1,i_flag} = 'flag_pp';
+% out.Mass.value(1,i_mass) = out_PP.M;
+% out.Mass.name{1,i_mass} = 'M_pp';
+% 
+% TS.PP = TS_PP;
+% 
+% if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_pp_ex';
+% end
+% 
+% % RECUPERATOR (cold side)
+% if isfield(param, 'REC')
+%     out.P_recc_su = P_prev;
+%     out.T_recc_su = out_PP.T_ex;
+%     out.h_recc_su = out_PP.h_ex;
+%     out.Q_dot_rec_bis = x(3);
+%     h_prev = min(out.h_recc_su + x(3)/out.m_dot_wf, CoolProp.PropsSI('H', 'P', out.P_recc_su, 'T', T_htf_su, fluid_wf));
+%     P_prev = out.P_recc_su;
+%     T_prev = CoolProp.PropsSI('T', 'P', P_prev, 'H', h_prev, fluid_wf);
+%     if isfield(param, 'V_aux_recc_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = param.V_aux_recc_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%         out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
+%     end
+% end
+% 
+% % PREHEATER &/ EVAPORATOR
+% if isfield(param, 'PRE')
+%     out.P_pre_su = P_prev;
+%     out.T_pre_su = T_prev;
+%     out.h_pre_su = h_prev;
+%     pre_ev = HexSeries(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_pre_su, out.h_pre_su, out.m_dot_wf, param.PRE, param.EV);
+%     TS_PRE = pre_ev.ts1;
+%     out.flag_pre_ev = pre_ev.flag;
+%     out.Q_dot_pre = pre_ev.hex1.Q_dot_tot;
+%     out.T_htf_pre_ex = pre_ev.hex1.T_h_ex;
+%     out.h_htf_pre_ex = pre_ev.hex1.h_h_ex;
+%     out.flag_pre = pre_ev.hex1.flag;
+%     out.pinch_pre = pre_ev.hex1.pinch;
+%     out.M_pre = pre_ev.hex1.M_c;
+%     out.time_pre = pre_ev.hex1.time;
+%     out.h_ev_su = pre_ev.hex1.h_c_ex;
+%     out.T_ev_su = pre_ev.hex1.T_c_ex;
+%     out.P_ev_su = out.P_pre_su;
+%     TS_EV = pre_ev.ts2;
+%     out.Q_dot_ev = pre_ev.hex2.Q_dot_tot;
+%     out.T_htf_ev_ex = pre_ev.hex2.T_h_ex;
+%     out.h_htf_ev_ex = pre_ev.hex2.h_h_ex;
+%     out.flag_ev = pre_ev.hex2.flag;
+%     out.pinch_ev = pre_ev.hex2.pinch;
+%     out.M_ev = pre_ev.hex2.M_c;
+%     out.time_ev = pre_ev.hex2.time;
+%     Q_dot_in = out.Q_dot_ev + out.Q_dot_pre;
+%     T_prev = pre_ev.hex2.T_c_ex;
+%     h_prev = pre_ev.hex2.h_c_ex;
+%     P_prev = out.P_ev_su;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = pre_ev.flag;
+%     out.flag.name{1,i_flag} = 'flag_pre_ev';
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = pre_ev.hex1.flag;
+%     out.flag.name{1,i_flag} = 'flag_pre';
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = pre_ev.hex2.flag;
+%     out.flag.name{1,i_flag} = 'flag_ev';
+%     
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_pre;
+%     out.Mass.name{1,i_mass} = 'M_pre';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_ev;
+%     out.Mass.name{1,i_mass} = 'M_ev';
+%     TS.PRE = TS_PRE;
+%     TS.EV = TS_EV;
+%     
+% else
+%     out.P_ev_su = P_prev;
+%     out.T_ev_su = T_prev;
+%     out.h_ev_su = h_prev;
+%     [out_EV, TS_EV] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_ev_su, out.h_ev_su, out.m_dot_wf , param.EV);
+%     out.Q_dot_ev = out_EV.Q_dot_tot;
+%     Q_dot_in = out.Q_dot_ev;
+%     out.T_htf_ev_ex = out_EV.T_h_ex;
+%     out.h_htf_ev_ex = out_EV.h_h_ex;
+%     out.M_ev = out_EV.M_c;
+%     out.flag_ev = out_EV.flag;
+%     out.time_ev = out_EV.time;
+%     out.pinch_ev = out_EV.pinch;
+%     P_prev = out.P_ev_su;
+%     T_prev = out_EV.T_c_ex;
+%     h_prev = out_EV.h_c_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_EV.flag;
+%     out.flag.name{1,i_flag} = 'flag_ev';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_ev;
+%     out.Mass.name{1,i_mass} = 'M_ev';
+%     TS.EV = TS_EV;
+%     
+% end
+% 
+% % LossesHP
+% if isfield(param, 'LossesHP')
+%     out.P_dphp_su = P_prev;
+%     out.T_dphp_su = T_prev;
+%     out.h_dphp_su = h_prev;
+%     param.LossesHP.type_in = 'su';
+%     [out_LossesHP, TS_LossesHP] = LossesModel(fluid_wf, out.P_dphp_su, out.h_dphp_su, out.m_dot_wf, T_amb, param.LossesHP);
+%     out.dphp = out_LossesHP.dp;
+%     out.Q_dot_hp = out_LossesHP.Q_dot;
+%     out.flag_lossesHP = out_LossesHP.flag;
+%     T_prev = out_LossesHP.T_ex;
+%     h_prev = out_LossesHP.h_ex;
+%     P_prev = out_LossesHP.P_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_LossesHP.flag;
+%     out.flag.name{1,i_flag} = 'flag_dphp';
+%     TS.LossesHP = TS_LossesHP;
+%     
+%     if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%         out.Mass.name{1,i_mass} = 'M_aux_ev_ex';
+%     end
+% end
+% 
+% % EXPANDER
+% out.P_exp_su = P_prev;
+% out.T_exp_su = T_prev;
+% out.h_exp_su = h_prev;
+% if isfield(param, 'LossesLP')
+%     param.LossesLP.type_in = 'ex';
+%     [out_LossesLP_bis, ~] = LossesModel(fluid_wf, x(2), out.h_pp_su, out.m_dot_wf, T_amb, param.LossesLP);
+%     P_exp_ex = x(2)+out_LossesLP_bis.dp;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_LossesLP_bis.flag;
+%     out.flag.name{1,i_flag} = 'flag_dplp_bis';
+% else
+%     P_exp_ex = x(2);
+% end
+% out.rp_exp = out.P_exp_su/P_exp_ex;
+% [out_EXP, TS_EXP] = ExpanderModel2(fluid_wf, out.P_exp_su, out.h_exp_su, out.m_dot_wf, P_exp_ex, T_amb, param.EXP);
+% out.N_exp_bis = out_EXP.N_exp;
+% out.W_dot_exp = out_EXP.W_dot;
+% out.Q_dot_exp = out_EXP.Q_dot_amb;
+% out.M_exp = out_EXP.M;
+% out.eps_vol_exp = out_EXP.FF;
+% out.eps_is_exp = out_EXP.epsilon_is;
+% out.flag_exp = out_EXP.flag;
+% out.time_exp = out_EXP.time;
+% T_prev = out_EXP.T_ex;
+% h_prev = out_EXP.h_ex;
+% P_prev = P_exp_ex;
+% i_flag = i_flag+1;
+% out.flag.value(1,i_flag) = out_EXP.flag;
+% out.flag.name{1,i_flag} = 'flag_exp';
+% i_mass = i_mass+1;
+% out.Mass.value(1,i_mass) = out.M_exp;
+% out.Mass.name{1,i_mass} = 'M_exp';
+% TS.EXP = TS_EXP;
+% 
+% if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
+% end
+% 
+% 
+% % RECUPERATOR (hot side)
+% if isfield(param, 'REC')
+%     out.P_rech_su = P_prev;
+%     out.T_rech_su = T_prev;
+%     out.h_rech_su = h_prev;
+%     [out_REC, TS_REC] = HexModel(fluid_wf, out.P_rech_su, out.h_rech_su, out.m_dot_wf, fluid_wf, out.P_recc_su, out.h_recc_su, out.m_dot_wf, param.REC);
+%     out.Q_dot_rec = out_REC.Q_dot_tot;
+%     out.M_rech = out_REC.M_h;
+%     out.M_recc = out_REC.M_c;
+%     out.flag_rec = out_REC.flag;
+%     out.time_rec = out_EXP.time;
+%     out.pinch_rec = out_REC.pinch;
+%     h_prev = out_REC.h_h_ex;
+%     P_prev = out.P_rech_su;
+%     T_prev = out_REC.T_h_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_REC.flag;
+%     out.flag.name{1,i_flag} = 'flag_rec';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_recc;
+%     out.Mass.name{1,i_mass} = 'M_recc';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_rech;
+%     out.Mass.name{1,i_mass} = 'M_rech';
+%     TS.REC = TS_REC;
+%     
+% end
+% if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
+% end
+% 
+% % CONDENSER &/ SUBCOOLER
+% if isfield(param, 'SUB')
+%     out.P_cd_su = P_prev;
+%     out.T_cd_su = T_prev;
+%     out.h_cd_su = h_prev;
+%     sub_cd = HexSeries(fluid_wf, out.P_cd_su, out.h_cd_su, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf, param.SUB, param.CD);
+%     out.flag_sub_cd = sub_cd.flag;
+%     out.Q_dot_cd = sub_cd.hex2.Q_dot_tot;
+%     out.T_ctf_cd_ex = sub_cd.hex2.T_c_ex;
+%     out.h_ctf_cd_ex = sub_cd.hex2.h_c_ex;
+%     out.M_cd = sub_cd.hex2.M_h;
+%     out.flag_cd = sub_cd.hex2.flag;
+%     out.pinch_cd = sub_cd.hex2.pinch;
+%     out.time_cd = sub_cd.hex2.time;
+%     out.Q_dot_sub = sub_cd.hex1.Q_dot_tot;
+%     out.T_ctf_cd_su = sub_cd.hex1.T_c_ex;
+%     out.h_ctf_cd_su = sub_cd.hex1.h_c_ex;
+%     out.M_sub = sub_cd.hex1.M_h;
+%     out.flag_sub = sub_cd.hex1.flag;
+%     out.pinch_sub = sub_cd.hex1.pinch;
+%     out.time_sub = sub_cd.hex1.time;
+%     out.h_sub_su = sub_cd.hex2.h_h_ex;
+%     out.T_sub_su = sub_cd.hex2.T_h_ex;
+%     out.P_sub_su = out.P_cd_su;
+%     T_prev = sub_cd.hex1.T_h_ex;
+%     h_prev = sub_cd.hex1.h_h_ex;
+%     P_prev = out.P_sub_su;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = sub_cd.flag;
+%     out.flag.name{1,i_flag} = 'flag_sub_cd';
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = sub_cd.hex1.flag;
+%     out.flag.name{1,i_flag} = 'flag_sub';
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = sub_cd.hex2.flag;
+%     out.flag.name{1,i_flag} = 'flag_cd';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_cd;
+%     out.Mass.name{1,i_mass} = 'M_cd';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_sub;
+%     out.Mass.name{1,i_mass} = 'M_sub';
+%     TS.SUB = sub_cd.ts1;
+%     TS.CD = sub_cd.ts2;
+% else
+%     out.P_cd_su = P_prev;
+%     out.T_cd_su = T_prev;
+%     out.h_cd_su = h_prev;
+%     [out_CD, TS_CD] = HexModel(fluid_wf, out.P_cd_su, out.h_cd_su, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
+%     out.Q_dot_cd = out_CD.Q_dot_tot;
+%     out.T_ctf_cd_ex = out_CD.T_c_ex;
+%     out.h_ctf_cd_ex = out_CD.h_c_ex;
+%     out.M_cd = out_CD.M_h;
+%     out.flag_cd = out_CD.flag;
+%     out.time_cd = out_CD.time;
+%     out.pinch_cd = out_CD.pinch;
+%     if isfield(param.CD, 'W_dot_aux')
+%         out.W_dot_cd = param.CD.W_dot_aux;
+%     else
+%         out.W_dot_cd = 0;
+%     end
+%     
+%     P_prev = out.P_cd_su;
+%     T_prev = out_CD.T_h_ex;
+%     h_prev = out_CD.h_h_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_CD.flag;
+%     out.flag.name{1,i_flag} = 'flag_cd';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out.M_cd;
+%     out.Mass.name{1,i_mass} = 'M_cd';
+%     TS.CD = TS_CD;
+%     
+% end
+% 
+% % LossesLP
+% if isfield(param, 'LossesLP')
+%     out.T_dplp_su = T_prev;
+%     out.h_dplp_su = h_prev;
+%     out.P_dplp_su = P_prev;
+%     param.LossesLP.type_in = 'su';
+%     [out_LossesLP, TS_LossesLP] = LossesModel(fluid_wf, out.P_dplp_su, out.h_dplp_su, out.m_dot_wf, T_amb, param.LossesLP);
+%     out.dplp = out_LossesLP.dp;
+%     out.Q_dot_lp = out_LossesLP.Q_dot;
+%     out.flag_lossesLP = out_LossesLP.flag;
+%     T_prev = out_LossesLP.T_ex;
+%     h_prev = out_LossesLP.h_ex;
+%     P_prev = out_LossesLP.P_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_LossesLP.flag;
+%     out.flag.name{1,i_flag} = 'flag_dplp';
+%     TS.LossesLP = TS_LossesLP;
+% end
+% 
+% % LIQUID RECEIVER AND PIPES
+% if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the liquid receiver if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+% end
+% if isfield(param, 'V_liq_rec')
+%     if abs((h_prev-CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf))/h_prev)<1e-3
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
+%         out.Mass.name{1,i_mass} = 'M_liq_receiver';
+%     else
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%         out.Mass.name{1,i_mass} = 'M_liq_receiver';
+%     end
+% end
+% out.M_tot = sum(out.Mass.value);
+% out.DT_bis =  CoolProp.PropsSI('T', 'P', P_prev, 'Q', 0, fluid_wf)-T_prev;
+% 
+% 
+% % ORC PERFORAMANCE
+% out.W_dot_net = out.W_dot_exp - out.W_dot_pp - out.W_dot_cd;
+% out.eff_ORC_gross = out.W_dot_exp/Q_dot_in;
+% out.eff_ORC_net = out.W_dot_net/Q_dot_in;
+% 
+% % RESIDUALS and RESULTS
+% out.res_ORC_Hsu = (1 - out.h_pp_su/h_prev);
+% 
+% out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
+% 
+% if x(3) == 0 && out.Q_dot_rec == 0
+%     out.res_ORC_Qdot_rec = 0;
+% elseif x(3) == 0 && out.Q_dot_rec ~= 0
+%     out.res_ORC_Qdot_rec = 1;
+% elseif x(3) ~= 0 && out.Q_dot_rec == 0
+%     out.res_ORC_Qdot_rec = 1;
+% else
+%     out.res_ORC_Qdot_rec = 1 - x(3)/out.Q_dot_rec;
+% end
+% 
+% if strcmp(param.solverType, 'M_imposed')
+%     out.res_ORC_M = (1 - out.M_tot/param.M_tot);
+%     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
+% elseif strcmp(param.solverType, 'DTsc_imposed')
+%     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+% end
+% 
 % if any(out.flag.value < 0)
 %     out.res_vec  = 1e5*out.res_vec;
 % end
-out.res  = norm(out.res_vec);
-
-out.x = x;
-
-end
+% out.res  = norm(out.res_vec);
+% 
+% out.x = x;
+% 
+% % Construction of the TS variable
+% TS.cycle.s = TS.PP.s;
+% TS.cycle.T = TS.PP.T;
+% if isfield(param, 'REC')
+%     TS.cycle.s = [TS.cycle.s  TS.REC.s_c];
+%     TS.cycle.T = [TS.cycle.T  TS.REC.T_c];
+% end
+% if isfield(param, 'PRE')
+%     TS.cycle.s = [TS.cycle.s  TS.PRE.s_c];
+%     TS.cycle.T = [TS.cycle.T  TS.PRE.T_c];
+% end
+% TS.cycle.s = [TS.cycle.s  TS.EV.s_c];
+% TS.cycle.T = [TS.cycle.T  TS.EV.T_c];
+% if isfield(param, 'LossesHP')
+%     TS.cycle.s = [TS.cycle.s TS.LossesHP.s];
+%     TS.cycle.T = [TS.cycle.T TS.LossesHP.T];
+% end
+% TS.cycle.s = [TS.cycle.s  TS.EXP.s];
+% TS.cycle.T = [TS.cycle.T  TS.EXP.T];
+% if isfield(param, 'REC')
+%     TS.cycle.s = [TS.cycle.s  fliplr(TS.REC.s_h)];
+%     TS.cycle.T = [TS.cycle.T  fliplr(TS.REC.T_h)];
+% end
+% TS.cycle.s = [TS.cycle.s fliplr(TS.CD.s_h)];
+% TS.cycle.T = [TS.cycle.T fliplr(TS.CD.T_h)];
+% if isfield(param, 'SUB')
+%     TS.cycle.s = [TS.cycle.s  fliplr(TS.SUB.s_h)];
+%     TS.cycle.T = [TS.cycle.T  fliplr(TS.SUB.T_h)];
+% end
+% if isfield(param, 'LossesLP')
+%     TS.cycle.s = [TS.cycle.s TS.LossesLP.s];
+%     TS.cycle.T = [TS.cycle.T TS.LossesLP.T];
+% end
+% 
+% out = orderfields(out);
+% end
+% 
+% function [out, TS] = OrganicRankineCycle_Fast(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+% TS = NaN;
+% x = max(x, lb./ub);
+% x = min(x,ones(1,length(x)));
+% x = x.*ub;
+% x(1) = max(x(1), 1.001*x(2));
+% i_flag = 1;
+% i_mass = 1;
+% 
+% % --------------------------------------------------------------------------------
+% % PUMP ---------------------------------------------------------------------------
+% % --------------------------------------------------------------------------------
+% out.P_pp_su = x(2);
+% if strcmp(param.solverType, 'M_imposed')
+%     out.h_pp_su = x(4);
+% elseif strcmp(param.solverType, 'DTsc_imposed')
+%     if param.DT_sc ~= 0
+%         out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc, fluid_wf);
+%     else
+%         out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
+%     end
+% end
+% [out_PP, ~] = PumpModel(x(2), out.h_pp_su, x(1), fluid_wf, N_pp, param.PP);
+% out.m_dot_wf = out_PP.m_dot;
+% h_prev = out_PP.h_ex;
+% P_prev = x(1);
+% 
+% out.flag.value(1,i_flag) = out_PP.flag;
+% out.flag.name{1,i_flag} = 'flag_pp';
+% out.Mass.value(1,i_mass) = out_PP.M;
+% out.Mass.name{1,i_mass} = 'M_pp';
+% 
+% 
+% if isfield(param, 'V_aux_pp_ex') %Mass of fluid in the pipelines after the pump if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_pp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_pp_ex';
+% end
+% 
+% % RECUPERATOR (cold side)
+% if isfield(param, 'REC')
+%     h_recc_su = h_prev;
+%     P_recc_su = P_prev;
+%     h_prev = min(h_prev + x(3)/out.m_dot_wf, CoolProp.PropsSI('H', 'P', P_prev, 'T', T_htf_su, fluid_wf));
+%     if isfield(param, 'V_aux_recc_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = param.V_aux_recc_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%         out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
+%     end
+% end
+% 
+% %EVAPORATOR
+% [out_EV, ~] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, P_prev,h_prev, out.m_dot_wf , param.EV);
+% h_prev = out_EV.h_c_ex;
+% i_flag = i_flag+1;
+% out.flag.value(1,i_flag) = out_EV.flag;
+% out.flag.name{1,i_flag} = 'flag_ev';
+% i_mass = i_mass+1;
+% out.Mass.value(1,i_mass) = out_EV.M_c;
+% out.Mass.name{1,i_mass} = 'M_ev';
+% 
+% 
+% % LossesHP
+% if isfield(param, 'LossesHP')
+%     param.LossesHP.type_in = 'su';
+%     [out_LossesHP, ~] = LossesModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, T_amb, param.LossesHP);
+%     h_prev = out_LossesHP.h_ex;
+%     P_prev = out_LossesHP.P_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_LossesHP.flag;
+%     out.flag.name{1,i_flag} = 'flag_dphp';
+%     
+%     if isfield(param, 'V_aux_ev_ex') %Mass of fluid in the pipelines after the recuperator if volume specified
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = param.V_aux_ev_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%         out.Mass.name{1,i_mass} = 'M_aux_ev_ex';
+%     end
+% end
+% 
+% % EXPANDER
+% if isfield(param, 'LossesLP')
+%     param.LossesLP.type_in = 'ex';
+%     [out_LossesLP_bis, ~] = LossesModel(fluid_wf, x(2), out.h_pp_su, out.m_dot_wf, T_amb, param.LossesLP);
+%     P_exp_ex = x(2)+out_LossesLP_bis.dp;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_LossesLP_bis.flag;
+%     out.flag.name{1,i_flag} = 'flag_dplp_bis';
+% else
+%     P_exp_ex = x(2);
+% end
+% [out_EXP, ~] = ExpanderModel2(fluid_wf, P_prev, h_prev, out.m_dot_wf, P_exp_ex, T_amb, param.EXP);
+% out.N_exp_bis = out_EXP.N_exp;
+% T_prev = out_EXP.T_ex;
+% h_prev = out_EXP.h_ex;
+% P_prev = P_exp_ex;
+% i_flag = i_flag+1;
+% out.flag.value(1,i_flag) = out_EXP.flag;
+% out.flag.name{1,i_flag} = 'flag_exp';
+% i_mass = i_mass+1;
+% out.Mass.value(1,i_mass) = out_EXP.M;
+% out.Mass.name{1,i_mass} = 'M_exp';
+% 
+% if isfield(param, 'V_aux_exp_ex') %Mass of fluid in the pipelines after the expander if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_exp_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
+% end
+% 
+% 
+% % RECUPERATOR (hot side)
+% if isfield(param, 'REC')
+%     [out_REC, ~] = HexModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, fluid_wf, P_recc_su, h_recc_su, out.m_dot_wf, param.REC);
+%     h_prev = out_REC.h_h_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_REC.flag;
+%     out.flag.name{1,i_flag} = 'flag_rec';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out_REC.M_c;
+%     out.Mass.name{1,i_mass} = 'M_recc';
+%     i_mass = i_mass+1;
+%     out.Mass.value(1,i_mass) = out_REC.M_h;
+%     out.Mass.name{1,i_mass} = 'M_rech';
+%     
+% end
+% if isfield(param, 'V_aux_rech_ex') %Mass of fluid in the pipelines after the expander if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_rech_ex';
+% end
+% 
+% % CONDENSER
+% 
+% [out_CD, ~] = HexModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
+% 
+% out.M_cd = out_CD.M_h;
+% h_prev = out_CD.h_h_ex;
+% i_flag = i_flag+1;
+% out.flag.value(1,i_flag) = out_CD.flag;
+% out.flag.name{1,i_flag} = 'flag_cd';
+% i_mass = i_mass+1;
+% out.Mass.value(1,i_mass) = out_CD.M_h;
+% out.Mass.name{1,i_mass} = 'M_cd';
+% 
+% % LossesLP
+% if isfield(param, 'LossesLP')
+%     param.LossesLP.type_in = 'su';
+%     [out_LossesLP, ~] = LossesModel(fluid_wf, P_prev, h_prev, out.m_dot_wf, T_amb, param.LossesLP);
+%     h_prev = out_LossesLP.h_ex;
+%     P_prev = out_LossesLP.P_ex;
+%     i_flag = i_flag+1;
+%     out.flag.value(1,i_flag) = out_LossesLP.flag;
+%     out.flag.name{1,i_flag} = 'flag_dplp';
+% end
+% 
+% % LIQUID RECEIVER AND PIPES
+% if isfield(param, 'V_aux_cd_ex') %Mass of fluid in the pipelines after the liquid receiver if volume specified
+%     i_mass = i_mass + 1;
+%     out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%     out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
+% end
+% if isfield(param, 'V_liq_rec')
+%     if abs((h_prev-CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf))/h_prev)<1e-2
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = max(param.V_liq_rec*CoolProp.PropsSI('D','Q',1,'P',P_prev,fluid_wf),min(param.M_tot-sum(out.Mass.value),param.V_liq_rec*CoolProp.PropsSI('D','Q',0,'P',P_prev,fluid_wf)));
+%         out.Mass.name{1,i_mass} = 'M_liq_receiver';
+%     else
+%         i_mass = i_mass + 1;
+%         out.Mass.value(1,i_mass) = param.V_liq_rec*CoolProp.PropsSI('D','H',h_prev,'P',P_prev,fluid_wf);
+%         out.Mass.name{1,i_mass} = 'M_liq_receiver';
+%     end
+% end
+% 
+% out.M_tot = sum(out.Mass.value);
+% 
+% % RESIDUALS and RESULTS
+% out.res_ORC_Hsu = (1 - out.h_pp_su/h_prev);
+% 
+% out.res_ORC_N_exp = 1-out.N_exp_bis/N_exp;
+% 
+% if x(3) == 0 && out_REC.Q_dot_tot == 0
+%     out.res_ORC_Qdot_rec = 0;
+% elseif x(3) == 0 && out_REC.Q_dot_tot ~= 0
+%     out.res_ORC_Qdot_rec = 1;
+% elseif x(3) ~= 0 && out_REC.Q_dot_tot == 0
+%     out.res_ORC_Qdot_rec = 1;
+% else
+%     out.res_ORC_Qdot_rec = 1 - x(3)/out_REC.Q_dot_tot;
+% end
+% 
+% if strcmp(param.solverType, 'M_imposed')
+%     out.res_ORC_M = (1 - out.M_tot/param.M_tot);
+%     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
+% elseif strcmp(param.solverType, 'DTsc_imposed')
+%     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+% end
+% 
+% % if any(out.flag.value < 0)
+% %     out.res_vec  = 1e5*out.res_vec;
+% % end
+% out.res  = norm(out.res_vec);
+% 
+% out.x = x;
+% 
+% end
 
 function out = OrganicRankineCycle_init2(z, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 out.rp_pp = z(1)/z(2);
@@ -1101,7 +1098,8 @@ i_mass = 1;
 % PUMP
 out.P_pp_su = z(2);
 if strcmp(param.solverType, 'M_imposed')
-    out.h_pp_su = (1-z(4))*CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', T_ctf_su-1, fluid_wf) + z(4)*CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
+%     out.h_pp_su = (1-z(4))*CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', T_ctf_su-1, fluid_wf) + z(4)*CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
+    out.h_pp_su = (1-z(4))*CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', T_ctf_su-1, fluid_wf) + z(4)*CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-1, fluid_wf);
     out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', out.h_pp_su, fluid_wf) ;
     out.DT_sc = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf)-out.T_pp_su;
 elseif strcmp(param.solverType, 'DTsc_imposed')
@@ -1443,7 +1441,8 @@ if strcmp(param.solverType, 'M_imposed')
     out.res_ORC_M = (1 - out.M_tot/param.M_tot);
     out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec    out.res_ORC_M];
 elseif strcmp(param.solverType, 'DTsc_imposed')
-    out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+   out.res_vec  = [out.res_ORC_N_exp    out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
+     %out.res_vec  = [out.res_ORC_Hsu     out.res_ORC_Qdot_rec];
 end
 
 % if any(out.flag.value < 0)
