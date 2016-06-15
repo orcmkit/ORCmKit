@@ -117,7 +117,7 @@ end
 
 %Predefined boundary conditions
 if isfield(param, 'x0')
-    x0_vec = linspace(1,20,20);
+    x0_vec = linspace(0.1,30,30);
     DP = 0.2e4;
     res_x0 = NaN*ones(1,length(x0_vec));
     P_pp_su_lb_vec_x0 = P_pp_su_lb*ones(1,length(x0_vec));

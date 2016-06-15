@@ -165,7 +165,7 @@ elseif strcmp(info.type_h,'T') && strcmp(info.type_c,'H')
     T_h_su = in_h_su;
     h_c_su = in_c_su;
     T_c_su = CoolProp.PropsSI('T','P',P_c_su,'H',h_c_su,fluid_c);
-    T_c_max = CoolProp.PropsSI('Tmax', 'P', P_c_su,'Q', 0, fluid_c)-0.5;
+    T_c_max = T_h_su; %CoolProp.PropsSI('Tmax', 'P', P_c_su,'Q', 0, fluid_c)-0.5
 
     % Computation of Q_dot_hext_max 
     Q_dot_hext_max = m_dot_h*sf_PropsSI_bar('C', T_h_su, T_c_su, P_h_su, fluid_h)*(T_h_su-T_c_su);

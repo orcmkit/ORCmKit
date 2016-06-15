@@ -146,7 +146,7 @@ switch param.modelType
                 out.flag = 1;
             end
         elseif strcmp(param.type_in, 'ex')
-            k_0 = [1.5 1.1 2 3 4 5 7 10];
+            k_0 = [1.5 1.1 1 2 3 4 5 7 10];
             stop = 0;
             k = 1;
             try

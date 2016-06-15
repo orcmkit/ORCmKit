@@ -139,12 +139,12 @@ if nargin == 0
     fluid_h = 'PiroblocBasic';      % Nature of the hot fluid           [-]
     m_dot_h = 0.8; %0.5;                  % Mass flow rat of the hot fluid    [kg/s]
     P_h_su =  3e5;                  % Supply pressure of the hot fluid  [Pa]
-    in_h_su =  3.531500000000000e+02; %400;                 % Supply h or T of the hot fluid  	[J/kg pr K]
+    in_h_su =  180+273.15; %400;                 % Supply h or T of the hot fluid  	[J/kg pr K]
     param.type_h = 'T';             % Type of inputs for the hot fluid  ['H' or 'T']
     fluid_c = 'R245fa';             % Nature of the cold fluid        	[-]
-    m_dot_c = 0.1;%0.015899945748693; %0.05;                 % Mass flow rat of the cold fluid  	[kg/s]
-    P_c_su = 5.719211993932171e+05; %4e5;                   % Supply pressure of the cold fluid	[Pa]
-    in_c_su = 2.219364526160259e+05;           % Supply h or T of the cold fluid  	[J/kg pr K]
+    m_dot_c = 0.01;%0.015899945748693; %0.05;                 % Mass flow rat of the cold fluid  	[kg/s]
+    P_c_su = 7.57e+05; %4e5;                   % Supply pressure of the cold fluid	[Pa]
+    in_c_su = 2.453e+05;           % Supply h or T of the cold fluid  	[J/kg pr K]
     param.type_c = 'H';             % Type of inputs for the cold fluid	['H' or 'T']
     param.displayResults = 1;
     param.displayTS = 1;
@@ -227,6 +227,7 @@ path = 'C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Su
     param.V_c_tot = 0.009;
     param.displayResults = 0;
     param.displayTS = 1;
+    param.generateTS = 1;
 end
 
 tstart_hex = tic;
@@ -255,7 +256,7 @@ elseif strcmp(param.type_c,'T')
     T_c_su = in_c_su;
 end
 
-if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0
+if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
     % Check if the operating conditions permit a viable heat transfer
     
     switch param.modelType
