@@ -43,7 +43,7 @@ function [out,TS] = ExpModel_2_SemiEmp(fluid, P_su, h_su, M_dot, P_ex, T_amb, pa
 %       - out: a structure variable which includes
 %               - T_ex =  exhaust temperature                    [K]
 %               - h_ex =  exhaust enthalpy                       [J/kg]
-%               - M_dot = fluid mass flow rate                   [kg/s]
+%               - N_exp = fluid mass flow rate                   [kg/s]
 %               - W_dot = mechanical power                       [W]
 %               - Q_dot_amb = ambiant losses                     [W]
 %               - epsilon_is = isentropic efficiency             [-]
@@ -59,32 +59,32 @@ function [out,TS] = ExpModel_2_SemiEmp(fluid, P_su, h_su, M_dot, P_ex, T_amb, pa
 % See the documentation for further details or contact rdickes@ulg.ac.be
 
 %% DEMONSTRATION CASE -- COMMENT THIS SECTION IF EXTERNAL CALL FOR SPEED IMPROVEMENT
-% if nargin == 0
-%     % Define a demonstration case if ExpanderModel.mat is not executed externally
-%     fluid = 'R245fa';                           %Nature of the fluid
-%     M_dot = 0.15982;                            %Mass flow rate         [kg/s]
-%     P_su = 6.753498330038136e+05;               %Supply pressure        [Pa]
-%     h_su = 4.052843743508205e+05;               %Supply enthalpy        [J/kg]
-%     P_ex = 2.471310061849047e+05;               %Exhaust pressure       [Pa]
-%     T_amb = 298.1500;                           %Ambient temperature    [K]
-%     param.V = 1.492257e-3;
-%     param.V_s = 1.279908675799087e-05;
-%     param.r_v_in = 2.19;
-%     param.A_leak0 = 1.344675598144531e-06;
-%     param.d_su = 0.003227564086914;
-%     param.alpha = 1.253662109374984e-05;
-%     param.W_dot_loss_0 = 0;
-%     param.C_loss = 7.952880859375330e-07;
-%     param.AU_su_n = 50.033569335937500;
-%     param.M_dot_n =  0.068378356905196;
-%     param.P_su_n = 1.417898896236315e+06;
-%     param.AU_ex_n = 94.017028808593750;
-%     param.AU_amb = 0.674005126953125;
-%     param.h_max =  CoolProp.PropsSI('H','P',4e6,'T',500,fluid);
-%     param.h_min =  CoolProp.PropsSI('H','P',5e4,'T',253.15,fluid);
-%     load('C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power\OffDesign\gamma_R245fa.mat'); 
-%     param.gamma.gamma_PQ_pol = gamma_PQ_R245fa; param.gamma.gamma_PT_pol = gamma_PT_R245fa;
-% end
+if nargin == 0
+    % Define a demonstration case if ExpanderModel.mat is not executed externally
+    fluid = 'R245fa';                           %Nature of the fluid
+    M_dot = 0.15982;                            %Mass flow rate         [kg/s]
+    P_su = 6.753498330038136e+05;               %Supply pressure        [Pa]
+    h_su = 4.052843743508205e+05;               %Supply enthalpy        [J/kg]
+    P_ex = 2.471310061849047e+05;               %Exhaust pressure       [Pa]
+    T_amb = 298.1500;                           %Ambient temperature    [K]
+    param.V = 1.492257e-3;
+    param.V_s = 1.279908675799087e-05;
+    param.r_v_in = 2.19;
+    param.A_leak0 = 1.344675598144531e-06;
+    param.d_su = 0.003227564086914;
+    param.alpha = 1.253662109374984e-05;
+    param.W_dot_loss_0 = 0;
+    param.C_loss = 7.952880859375330e-07;
+    param.AU_su_n = 50.033569335937500;
+    param.M_dot_n =  0.068378356905196;
+    param.P_su_n = 1.417898896236315e+06;
+    param.AU_ex_n = 94.017028808593750;
+    param.AU_amb = 0.674005126953125;
+    param.h_max =  CoolProp.PropsSI('H','P',4e6,'T',500,fluid);
+    param.h_min =  CoolProp.PropsSI('H','P',5e4,'T',253.15,fluid);
+    load('C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power\OffDesign\gamma_R245fa.mat'); 
+    param.gamma.gamma_PQ_pol = gamma_PQ_R245fa; param.gamma.gamma_PT_pol = gamma_PT_R245fa;
+end
 
 %% MODELLING SECTION
 tstart_exp = tic;

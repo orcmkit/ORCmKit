@@ -106,6 +106,9 @@ end
 if not(isfield(param,'h_max'))
     param.h_max =  CoolProp.PropsSI('H','P',4e6,'T',500,fluid);
 end
+if not(isfield(param,'V'))
+    param.V =  0;
+end
 
 T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
 s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);

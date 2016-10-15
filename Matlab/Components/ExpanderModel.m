@@ -1,5 +1,4 @@
 function [out,TS] = ExpanderModel(fluid, P_su, h_su, N_exp, P_ex, T_amb, param)
-%fluid, P_su, h_su, N_exp, P_ex, T_amb, param
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 
@@ -118,7 +117,6 @@ tstart_exp = tic;
 
 %% EXPANDER MODELING
 % Modelling section of the code
-
 if not(isfield(param,'displayResults'))
     param.displayResults = 0;
     %if nothing specified by the user, the results are not displayed by
@@ -137,7 +135,13 @@ s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
 rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
 h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
 
+if not(isfield(param,{'V'}))
+    param.V = 0;
+end
+
 if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
+
+
     %If the external conditions are viable (i.e. pressure ratio higher than
     %1 and in two phase conditions), we proceed to the modeling:
              
@@ -207,23 +211,49 @@ if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
             if not(isfield(param,{'AU_amb'}))
                 param.AU_amb = 0;
             end       
-            ff_guess = [1 0.8 1.2 0.7 1.3 0.4 1.7]; %guesses on the filling factor to provide suitable initial point for the iteration
+%             ff_guess = [1 0.8 1.2 0.7 1.3 0.4 1.7 3 ]; %guesses on the filling factor to provide suitable initial point for the iteration
+%             stop = 0;
+%             k =1;
+%             while not(stop) && k <= length(ff_guess)
+%             % Loop to permit multiple attempts to solve the implicit
+%             % calculation of Exp_SemiEmp trough Exp_SemiEmp_res
+%                 x0(1) = ff_guess(k)*param.V_s*N_exp/60*CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid); %initial value for M_dot
+%                 x0(2) = 0.9*T_su+0.1*T_amb; %initial value for T_wall
+%                 x0(3) = 1; %initial value for gamma
+%                 ub = 2*x0; % upper bound for fsolve
+%                 options = optimset('Display','off');
+%                 [x, ~, flag] = fsolve(@(x)  Exp_SemiEmp_res(x, ub, fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max), x0./ub, options);
+%                 if flag > 0
+%                     stop = 1;
+%                 end
+%                 k = k + 1;
+%             end
+            
+            ff_guess = [0.8 1.2 0.7 1.3 0.4 1.7 3 ]; %guesses on the filling factor to provide suitable initial point for the iteration
+            x_T_guess = [0.9 0.95 0.8 0.99 0.7];
             stop = 0;
-            k =1;
-            while not(stop) && k <= length(ff_guess)
-            % Loop to permit multiple attempts to solve the implicit
-            % calculation of Exp_SemiEmp trough Exp_SemiEmp_res
-                x0(1) = ff_guess(k)*param.V_s*N_exp/60*CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid); %initial value for M_dot
-                x0(2) = 0.9*T_su+0.1*T_amb; %initial value for T_wall
-                x0(3) = 1; %initial value for gamma
-                ub = 2*x0; % upper bound for fsolve
-                options = optimset('Display','off');
-                [x, ~, flag] = fsolve(@(x)  Exp_SemiEmp_res(x, ub, fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max), x0./ub, options);
-                if flag > 0
-                    stop = 1;
+            
+            j = 1;
+            while not(stop) && j <= length(x_T_guess)
+                k =1;
+                while not(stop) && k <= length(ff_guess)
+
+                    % Loop to permit multiple attempts to solve the implicit
+                    % calculation of Exp_SemiEmp trough Exp_SemiEmp_res
+                    x0(1) = ff_guess(k)*param.V_s*N_exp/60*CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid); %initial value for M_dot
+                    x0(2) = x_T_guess(j)*T_su+(1-x_T_guess(j))*T_amb; %initial value for T_wall
+                    x0(3) = 0.8; %initial value for gamma
+                    ub = 2*x0; % upper bound for fsolve
+                    options = optimset('Display','none');% 'TolX', 1e-8, 'TolFun', 1e-4);
+                    [x, res, flag] = fsolve(@(x)  Exp_SemiEmp_res(x, ub, fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max), x0./ub, options);
+                    if norm(res) < 1e-4 %flag > 0 
+                        stop = 1;
+                    end
+                    k = k + 1;
                 end
-                k = k + 1;
+                j = j + 1;
             end
+            
             x = x.*ub;
             int = Exp_SemiEmp(x(1), x(2), x(3), fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max);
             M_dot = x(1);

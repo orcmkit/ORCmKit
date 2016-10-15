@@ -69,7 +69,7 @@ end
 
 % Cold heat transfer fluid lines 
 if isfield(TS, 'CD')
-    line_ctf =patchline(TS.CD.s_h, TS.CD.T_c-273.15, 'edgecolor',param.color_ctf, 'linestyle',param.LineStyle_ctf, 'linewidth',param.LineWidth_ctf);
+    line_ctf =patchline(TS.CD.s_h, TS.CD.T_c-273.15, 'edgecolor',param.color_ctf, 'linestyle',param.LineStyle_ctf, 'linewidth',param.LineWidth_ctf,'edgealpha',param.alpha_ctf);
     patchline([TS.CD.s_h(1) TS.CD.s_h(end)], [TS.CD.T_c(1) TS.CD.T_c(end)]-273.15, 'edgecolor',param.color_ctf, 'linestyle','none', 'Marker', param.MarkerType_ctf,'edgealpha',param.alpha_ctf, 'MarkerSize', param.MarkerSize_ctf);
 end
 if isfield(TS, 'SUB')
@@ -101,8 +101,8 @@ end
 if isfield(TS, 'EV')
     patchline([TS.EV.s_c(1) TS.EV.s_c(end)], [TS.EV.T_c(1) TS.EV.T_c(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
 end
-if isfield(TS, 'DPHP')
-    patchline([TS.DPHP.s(1) TS.DPHP.s(end)], [TS.DPHP.T(1) TS.DPHP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+if isfield(TS, 'LossesHP')
+    patchline([TS.LossesHP.s(1) TS.LossesHP.s(end)], [TS.LossesHP.T(1) TS.LossesHP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
 end
 if isfield(TS, 'EXP')
     patchline([TS.EXP.s(1) TS.EXP.s(end)], [TS.EXP.T(1) TS.EXP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
@@ -120,8 +120,8 @@ end
 if isfield(TS, 'SUB')
     patchline([TS.SUB.s_h(1) TS.SUB.s_h(end)], [TS.SUB.T_h(1) TS.SUB.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
 end
-if isfield(TS, 'DPLP')
-    patchline([TS.DPLP.s(1) TS.DPLP.s(end)], [TS.DPLP.T(1) TS.DPLP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+if isfield(TS, 'LossesLP')
+    patchline([TS.LossesLP.s(1) TS.LossesLP.s(end)], [TS.LossesLP.T(1) TS.LossesLP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
 end
 
 hold on

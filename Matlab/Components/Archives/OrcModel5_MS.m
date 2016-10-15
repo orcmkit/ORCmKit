@@ -1,4 +1,4 @@
-function [out_ORC, TS_ORC] = OrcModel5(fluid_wf, fluid_htf, in_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+function [out_ORC, TS_ORC] = OrcModel5_MS(fluid_wf, fluid_htf, in_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 
@@ -141,7 +141,7 @@ end
 if strcmp(param.solverType, 'DTsc_imposed') %% CASE 1 : subcooling imposed
     
     % Initial conditions evaluation
-    IC = InitialConditions_ORC_Ext_Npp_Nexp_2(fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+    IC = InitialConditions_ORC_Ext_Npp_Nexp_2_MS(fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
     if max(param.init) <2
         if length(IC.res) < 1 || min(IC.res) > 1
             out_ORC.flag_ORC = - 1;
@@ -178,17 +178,17 @@ if strcmp(param.solverType, 'DTsc_imposed') %% CASE 1 : subcooling imposed
         
         while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
             
-            %             if strcmp(param.solverType, 'DTsc_imposed')
-            x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))];
-            ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))];
-            lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))];
-            A_ineq = [-1 1.001 0]; B_ineq = [0];
-            %             elseif strcmp(param.solverType, 'M_imposed')
-            %                 x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))     IC.h_pp_su_guess_vec(j_order(k))];
-            %                 ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))        IC.h_pp_su_ub_vec(j_order(k))];
-            %                 lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))        IC.h_pp_su_lb_vec(j_order(k))];
-            %                 A_ineq = [-1 1.001 0 0]; B_ineq = [0];
-            %             end
+%             if strcmp(param.solverType, 'DTsc_imposed')
+                x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))];
+                ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))];
+                lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))];
+                A_ineq = [-1 1.001 0]; B_ineq = [0];
+%             elseif strcmp(param.solverType, 'M_imposed')
+%                 x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))     IC.h_pp_su_guess_vec(j_order(k))];
+%                 ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))        IC.h_pp_su_ub_vec(j_order(k))];
+%                 lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))        IC.h_pp_su_lb_vec(j_order(k))];
+%                 A_ineq = [-1 1.001 0 0]; B_ineq = [0];
+%             end
             if param.display
                 fprintf('%-10s %-5d %-60s %-15s ', [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(IC.res(j_order(k)), '%.4g'));
             end
@@ -196,14 +196,17 @@ if strcmp(param.solverType, 'DTsc_imposed') %% CASE 1 : subcooling imposed
             param.EV.generateTS = 0;
             param.CD.generateTS = 0;
             param.REC.generateTS = 0;
-            f = @(x) FCT_ORC_Ext_Npp_Nexp_res_2( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+            param.SUB.generateTS = 0;
+            param.PRE.generateTS = 0;
+            f = @(x) FCT_ORC_Ext_Npp_Nexp_res_2_MS( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
             x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
             param.eval_type = 'long';
             param.EV.generateTS = 1;
             param.CD.generateTS = 1;
             param.REC.generateTS = 1;
-            
-            [out_ORC, TS_ORC] = FCT_ORC_Ext_Npp_Nexp_2(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+            param.SUB.generateTS = 1;
+            param.PRE.generateTS = 1;            
+            [out_ORC, TS_ORC] = FCT_ORC_Ext_Npp_Nexp_2_MS(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
             
             if any(out_ORC.flag.value<0)
                 out_ORC.flag_ORC = - 1;
@@ -232,148 +235,133 @@ if strcmp(param.solverType, 'DTsc_imposed') %% CASE 1 : subcooling imposed
     
 elseif strcmp(param.solverType, 'M_imposed')  %% CASE 2 : REFRIGERANT MASS IMPOSED
     
-    if not(isfield(param, 'x0')) || length(param.x0) == 3
-        
-        % Scenario #1 : saturated liquid at the pump supply
-        param_liq0 = param;
-        param_liq0.solverType = 'DTsc_imposed';
-        param_liq0.DT_sc = 0;
+    % Scenario #1 : saturated liquid at the pump supply
+    param_liq0 = param;
+    param_liq0.solverType = 'DTsc_imposed';
+    param_liq0.DT_sc = 0;
+    
+    if param.display
+        fprintf('\nScenario 1: DTsc = 0\n');
+    end
+    
+    % Initial conditions evaluation
+    IC_liq0 = InitialConditions_ORC_Ext_Npp_Nexp_2_MS(fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param_liq0);
+    if max(param.init) <2
+        if length(IC_liq0.res) < 1 || min(IC_liq0.res) > 1
+            out_ORC.flag_ORC = - 4;
+            TS_ORC = NaN;
+            return
+        end
+    end
+    
+    % Order guesses results
+    [res_ordered, j_order] = sort(IC_liq0.res);
+    Nbr_comb_x0 = length(j_order);
+    Nbr_comb_x0_max = param.nbr_test;
+    if param.display
+        disp('x0 residuals and index:')
+        fprintf('\n');
+        disp(num2str([j_order(1:min(Nbr_comb_x0,Nbr_comb_x0_max)); res_ordered(1:min(Nbr_comb_x0,Nbr_comb_x0_max))]))
+        fprintf('\n');
+    end
+    
+    % Start evaluation
+    if not(isempty(res_ordered))
         
         if param.display
-            fprintf('\nScenario 1: DTsc = 0\n');
+            fprintf('\n');
+            disp('Start iteration:')
+            fprintf('\n');
+            fprintf('%-10s %-5s %-60s %-15s %-60s %-60s %-10s %-100s\n', '#', 'i0', 'x_in', 'res_in', 'x_out', 'res_out', 'flag_ORC', 'flag components');
+            fprintf('\n');
         end
+        k= 1;
+        out_ORC_best.res = 1e10;
+        stop = 0;
+        options_fmincon = optimset('Disp',param.displayIter,'Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
         
-        % Initial conditions evaluation
-        IC_liq0 = InitialConditions_ORC_Ext_Npp_Nexp_2(fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param_liq0);
+        while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
+            
+            x0 = [IC_liq0.P_pp_ex_guess_vec(j_order(k))    IC_liq0.P_pp_su_guess_vec(j_order(k))    IC_liq0.h_ev_ex_guess_vec(j_order(k))];
+            ub = [IC_liq0.P_pp_ex_ub_vec(j_order(k))       IC_liq0.P_pp_su_ub_vec(j_order(k))       IC_liq0.h_ev_ex_ub_vec(j_order(k))];
+            lb = [IC_liq0.P_pp_ex_lb_vec(j_order(k))       IC_liq0.P_pp_su_lb_vec(j_order(k))       IC_liq0.h_ev_ex_lb_vec(j_order(k))];
+            A_ineq = [-1 1.001 0]; B_ineq = [0];
+            
+            if param.display
+                fprintf('%-10s %-5d %-60s %-15s ', [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(IC_liq0.res(j_order(k)), '%.4g'));
+            end
+            param_liq0.eval_type = 'fast';
+            param_liq0.EV.generateTS = 0;
+            param_liq0.CD.generateTS = 0;
+            param_liq0.REC.generateTS = 0;
+            f = @(x) FCT_ORC_Ext_Npp_Nexp_res_2_MS( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param_liq0);
+            x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
+            param_liq0.eval_type = 'long';
+            param_liq0.EV.generateTS = 1;
+            param_liq0.CD.generateTS = 1;
+            param_liq0.REC.generateTS = 1;
+            [out_ORC, TS_ORC] = FCT_ORC_Ext_Npp_Nexp_2_MS(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param_liq0);
+            
+            if any(out_ORC.flag.value<0)
+                out_ORC.flag_ORC = - 1;
+                stop = 0;
+            elseif all(out_ORC.flag.value>0) && any(abs(out_ORC.res_vec) > 5e-5)
+                out_ORC.flag_ORC = -2;
+                stop = 0;
+            else
+                out_ORC.flag_ORC = 1;
+                stop = 1;
+            end
+            if param.display
+                fprintf('%-60s %-60s %-10s %-100s \n', ['[' num2str(x.*ub,'%15.4e') ']'], [ num2str(out_ORC.res, '%.4g') '  [ ' num2str(out_ORC.res_vec,'%15.4e') ' ] '], num2str(out_ORC.flag_ORC), num2str(out_ORC.flag.value));
+            end
+            if out_ORC.res < out_ORC_best.res
+                out_ORC_best = out_ORC;
+            end
+            out_ORC = out_ORC_best;
+            k = k+1;
+        end
+        if param.display
+            fprintf('\n Level in liquid receiver : %d \n', out_ORC.level_receiver);
+        end
         if max(param.init) <2
-            if length(IC_liq0.res) < 1 || min(IC_liq0.res) > 1
+            if out_ORC.flag_ORC < 0
                 out_ORC.flag_ORC = - 4;
                 TS_ORC = NaN;
                 return
             end
         end
-        
-        % Order guesses results
-        [res_ordered, j_order] = sort(IC_liq0.res);
-        Nbr_comb_x0 = length(j_order);
-        Nbr_comb_x0_max = param.nbr_test;
-        if param.display
-            disp('x0 residuals and index:')
-            fprintf('\n');
-            disp(num2str([j_order(1:min(Nbr_comb_x0,Nbr_comb_x0_max)); res_ordered(1:min(Nbr_comb_x0,Nbr_comb_x0_max))]))
-            fprintf('\n');
-        end
-        
-        % Start evaluation
-        if not(isempty(res_ordered))
-            
-            if param.display
-                fprintf('\n');
-                disp('Start iteration:')
-                fprintf('\n');
-                fprintf('%-10s %-5s %-60s %-15s %-60s %-60s %-10s %-100s\n', '#', 'i0', 'x_in', 'res_in', 'x_out', 'res_out', 'flag_ORC', 'flag components');
-                fprintf('\n');
-            end
-            k= 1;
-            out_ORC_best.res = 1e10;
-            stop = 0;
-            %parpool
-            options_fmincon = optimset('Disp',param.displayIter,'Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
-            
-            while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
-                
-                x0 = [IC_liq0.P_pp_ex_guess_vec(j_order(k))    IC_liq0.P_pp_su_guess_vec(j_order(k))    IC_liq0.h_ev_ex_guess_vec(j_order(k))];
-                ub = [IC_liq0.P_pp_ex_ub_vec(j_order(k))       IC_liq0.P_pp_su_ub_vec(j_order(k))       IC_liq0.h_ev_ex_ub_vec(j_order(k))];
-                lb = [IC_liq0.P_pp_ex_lb_vec(j_order(k))       IC_liq0.P_pp_su_lb_vec(j_order(k))       IC_liq0.h_ev_ex_lb_vec(j_order(k))];
-                A_ineq = [-1 1.001 0]; B_ineq = [0];
-                
-                if param.display
-                    fprintf('%-10s %-5d %-60s %-15s ', [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(IC_liq0.res(j_order(k)), '%.4g'));
-                end
-                param_liq0.eval_type = 'fast';
-                param_liq0.EV.generateTS = 0;
-                param_liq0.CD.generateTS = 0;
-                param_liq0.REC.generateTS = 0;
-                f = @(x) FCT_ORC_Ext_Npp_Nexp_res_2( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param_liq0);
-                x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
-                param_liq0.eval_type = 'long';
-                param_liq0.EV.generateTS = 1;
-                param_liq0.CD.generateTS = 1;
-                param_liq0.REC.generateTS = 1;
-                [out_ORC, TS_ORC] = FCT_ORC_Ext_Npp_Nexp_2(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param_liq0);
-                
-                if any(out_ORC.flag.value<0)
-                    out_ORC.flag_ORC = - 1;
-                    stop = 0;
-                elseif all(out_ORC.flag.value>0) && any(abs(out_ORC.res_vec) > 5e-5)
-                    out_ORC.flag_ORC = -2;
-                    stop = 0;
-                else
-                    out_ORC.flag_ORC = 1;
-                    stop = 1;
-                end
-                if param.display
-                    fprintf('%-60s %-60s %-10s %-100s \n', ['[' num2str(x.*ub,'%15.4e') ']'], [ num2str(out_ORC.res, '%.4g') '  [ ' num2str(out_ORC.res_vec,'%15.4e') ' ] '], num2str(out_ORC.flag_ORC), num2str(out_ORC.flag.value));
-                end
-                if out_ORC.res < out_ORC_best.res
-                    out_ORC_best = out_ORC;
-                end
-                out_ORC = out_ORC_best;
-                k = k+1;
-            end
-            if param.display
-                fprintf('\n Level in liquid receiver : %d \n', out_ORC.level_receiver);
-            end
-            if max(param.init) <2
-                if out_ORC.flag_ORC < 0
-                    out_ORC.flag_ORC = - 4;
-                    TS_ORC = NaN;
-                    return
-                end
-            end
-            if out_ORC.level_receiver < 1 && out_ORC.level_receiver > 0
-                sub_cooled_eval = 0;
-            elseif out_ORC.level_receiver <= 0
-                out_ORC.flag_ORC = 8;
-                sub_cooled_eval = 0;
-            else
-                sub_cooled_eval = 1;
-            end
+        if out_ORC.level_receiver < 1 && out_ORC.level_receiver > 0
+            sub_cooled_eval = 0;
+        elseif out_ORC.level_receiver <= 0
+            out_ORC.flag_ORC = 8;
+            sub_cooled_eval = 0;
         else
-            out_ORC.flag_ORC = - 1;
-            TS_ORC = NaN;
             sub_cooled_eval = 1;
         end
         
     else
+        out_ORC.flag_ORC = - 1;
+        TS_ORC = NaN;
         sub_cooled_eval = 1;
-        out_ORC.flag_ORC = -7;
     end
-    out_liqSat = out_ORC;
-    
     
     if sub_cooled_eval
         param.limit_P_pp_su = 0;
         if param.display
             fprintf('\nScenario 2: DTsc < 0\n');
         end
-        if out_ORC.flag_ORC > 0
+        if out_ORC.flag_ORC > 0 
             P_pp_ex_guess = out_ORC.P_recc_su;
             P_pp_su_guess = out_ORC.P_pp_su;
             h_dphp_su_guess = out_ORC.h_dphp_su;
             T_pp_su_guess = out_ORC.T_pp_su ; %CoolProp.PropsSI('T', 'P',P_pp_su_guess, 'T', out_ORC.T_pp_su , fluid_wf) ; %max(CoolProp.PropsSI('H', 'P',P_pp_su_guess, 'T', T_ctf_su , fluid_wf), CoolProp.PropsSI('H', 'P',P_pp_su_guess, 'T', CoolProp.PropsSI('T', 'P',P_pp_su_guess, 'Q', 0 , fluid_wf)-3 , fluid_wf));
-            %param.x0 = [P_pp_ex_guess   P_pp_su_guess    h_dphp_su_guess   T_pp_su_guess];
-            param.x0_SatLiq = [P_pp_ex_guess   P_pp_su_guess    h_dphp_su_guess   T_pp_su_guess];
-            %param.limit_P_pp_su = 1;
+            param.x0 = [P_pp_ex_guess   P_pp_su_guess    h_dphp_su_guess   T_pp_su_guess];
+            param.limit_P_pp_su = 1;
         end
         clear out_ORC TS_ORC
-        
-        if isfield(param,'x0') && length(param.x0) == 3
-            param = rmfield(param, 'x0');
-        end
-        
         % Initial conditions evaluation
-        IC = InitialConditions_ORC_Ext_Npp_Nexp_2(fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+        IC = InitialConditions_ORC_Ext_Npp_Nexp_2_MS(fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
         if max(param.init) <2
             if length(IC.res) < 1 || min(IC.res) > 1
                 out_ORC.flag_ORC = - 1;
@@ -407,18 +395,16 @@ elseif strcmp(param.solverType, 'M_imposed')  %% CASE 2 : REFRIGERANT MASS IMPOS
             out_ORC_best.res = 1e10;
             stop = 0;
             options_fmincon = optimset('Disp',param.displayIter,'Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
-            %options_fminsearch = optimset('Display','none','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e3, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
-            %options_pattsearch = psoptimset('Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'TolMesh', 1e-8, 'MaxIter', 1e3, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
-            %parpool
+            
             while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
                 
                 x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))     IC.T_pp_su_guess_vec(j_order(k))];
                 ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))        IC.T_pp_su_ub_vec(j_order(k))];
                 lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))        IC.T_pp_su_lb_vec(j_order(k))];
                 
-                %                 x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))     3];
-                %                 ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))        20];
-                %                 lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))        0.001];
+%                 x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))     3];
+%                 ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))        20];
+%                 lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))        0.001];
                 
                 A_ineq = [-1 1.001 0 0]; B_ineq = [0];
                 if param.display
@@ -428,15 +414,13 @@ elseif strcmp(param.solverType, 'M_imposed')  %% CASE 2 : REFRIGERANT MASS IMPOS
                 param.EV.generateTS = 0;
                 param.CD.generateTS = 0;
                 param.REC.generateTS = 0;
-                f = @(x) FCT_ORC_Ext_Npp_Nexp_res_2( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+                f = @(x) FCT_ORC_Ext_Npp_Nexp_res_2_MS( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
                 x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
-                %[x, ~, ~, ~] = fminsearch(f,x0./ub, options_fminsearch);
-                %[x, ~, ~,  ] = patternsearch(f,x0./ub,[],[],[],[],lb./ub,ub./ub,[],options_pattsearch);
                 param.eval_type = 'long';
                 param.EV.generateTS = 1;
                 param.CD.generateTS = 1;
                 param.REC.generateTS = 1;
-                [out_ORC, TS_ORC] = FCT_ORC_Ext_Npp_Nexp_2(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
+                [out_ORC, TS_ORC] = FCT_ORC_Ext_Npp_Nexp_2_MS(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
                 
                 if any(out_ORC.flag.value<0)
                     out_ORC.flag_ORC = - 1;
@@ -463,7 +447,7 @@ elseif strcmp(param.solverType, 'M_imposed')  %% CASE 2 : REFRIGERANT MASS IMPOS
         end
         
     end
-    out_ORC.out_liqSat = out_liqSat;
+    
     
     
 end

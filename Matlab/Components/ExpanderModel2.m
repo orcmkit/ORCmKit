@@ -1,5 +1,5 @@
 function [out,TS] = ExpanderModel2(fluid, P_su, h_su, M_dot, P_ex, T_amb, param)
-%fluid, P_su, h_su, N_exp, P_ex, T_amb, param
+%fluid, P_su, h_su, M_dot, P_ex, T_amb, param
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 
@@ -83,7 +83,7 @@ if nargin == 0
     P_ex = 2.471310061849047e+05;               %Exhaust pressure       [Pa]
     T_amb = 298.1500;              %Ambient temperature    [K]
     param.displayResults = 1;                   %Flag to control the resustl display [0/1]
-    param.modelType = 'SemiEmp';                %Type of model          [CstEff, PolEff, SemiEmp]
+    param.modelType = 'PolEff';                %Type of model          [CstEff, PolEff, SemiEmp]
     param.gamma = 0.8;
     switch param.modelType
         case 'CstEff'
@@ -163,12 +163,19 @@ if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
             end            
             
         case 'PolEff'
+            
+            f_polEff = @(x) PolEffInverted(x, M_dot, P_su, P_ex, rho_su, param);
+            x0 = 60*M_dot/(param.V_s*rho_su);
+            options = optimoptions('fsolve','Display','none', 'TolX', 1e-10, 'TolFun', 1e-10); 
+            [N_exp, res_N] = fsolve(f_polEff, x0, options);
+            
+            
             if length(param.coeffPol_ff) == 6
                 % if expander with constant speed -> quadratic function of Rp and rho_su
-                FF = max(0.5, min(param.coeffPol_ff(1) + param.coeffPol_ff(2)*(P_su/P_ex) + param.coeffPol_ff(3)*rho_su + param.coeffPol_ff(4)*(P_su/P_ex)^2 + param.coeffPol_ff(5)*(P_su/P_ex)*rho_su + param.coeffPol_ff(6)*(rho_su)^2, 5));
+                FF = max(0.2, min(param.coeffPol_ff(1) + param.coeffPol_ff(2)*(P_su/P_ex) + param.coeffPol_ff(3)*rho_su + param.coeffPol_ff(4)*(P_su/P_ex)^2 + param.coeffPol_ff(5)*(P_su/P_ex)*rho_su + param.coeffPol_ff(6)*(rho_su)^2, 10));
             elseif length(param.coeffPol_ff) == 10
                 % if expander with variable speed -> quadratic function of Rp, rho_su and N_exp
-                FF = max(0.3,min(param.coeffPol_ff(1) + param.coeffPol_ff(2)*(P_su/P_ex) + param.coeffPol_ff(3)*rho_su + param.coeffPol_ff(4)*(P_su/P_ex)^2 + param.coeffPol_ff(5)*(P_su/P_ex)*rho_su + param.coeffPol_ff(6)*(rho_su)^2 + param.coeffPol_ff(7)*N_exp + param.coeffPol_ff(8)*N_exp^2 + param.coeffPol_ff(9)*N_exp*(P_su/P_ex) + param.coeffPol_ff(10)*N_exp*rho_su,5));
+                FF = max(0.2,min(param.coeffPol_ff(1) + param.coeffPol_ff(2)*(P_su/P_ex) + param.coeffPol_ff(3)*rho_su + param.coeffPol_ff(4)*(P_su/P_ex)^2 + param.coeffPol_ff(5)*(P_su/P_ex)*rho_su + param.coeffPol_ff(6)*(rho_su)^2 + param.coeffPol_ff(7)*N_exp + param.coeffPol_ff(8)*N_exp^2 + param.coeffPol_ff(9)*N_exp*(P_su/P_ex) + param.coeffPol_ff(10)*N_exp*rho_su,10));
             end
             if length(param.coeffPol_is) == 6
                 % if expander with constant speed -> quadratic function of Rp and rho_su
@@ -177,11 +184,10 @@ if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
                 % if expander with variable speed -> quadratic function of Rp, rho_su and N_exp
                 epsilon_is = max(0.01,min(param.coeffPol_is(1) + param.coeffPol_is(2)*(P_su/P_ex) + param.coeffPol_is(3)*rho_su + param.coeffPol_is(4)*(P_su/P_ex)^2 + param.coeffPol_is(5)*(P_su/P_ex)*rho_su + param.coeffPol_is(6)*(rho_su)^2 + param.coeffPol_is(7)*N_exp + param.coeffPol_is(8)*N_exp^2 + param.coeffPol_is(9)*N_exp*(P_su/P_ex) + param.coeffPol_is(10)*N_exp*rho_su,1));
             end
-            N_exp = 60*M_dot/(param.V_s*FF*rho_su);
             W_dot = M_dot*(h_su - h_ex_s)*epsilon_is;
             Q_dot_amb = max(0,param.AU_amb*(T_su - T_amb));
             h_ex = h_su - (W_dot + Q_dot_amb)/M_dot;
-            if h_ex > param.h_min && h_ex < param.h_max
+            if h_ex > param.h_min && h_ex < param.h_max && abs(res_N) < 1e-5
                 out.flag = 1;
             else
                 out.flag = -1;
@@ -349,7 +355,7 @@ out.rho_in = out.rho_su2/r_v_in;
 try
     out.P_in = CoolProp.PropsSI('P','D',out.rho_in,'S',out.s_su2,fluid);
 catch
-    delta = 0.0001;
+    delta = 0.001;
     out.P_in = 0.5*CoolProp.PropsSI('P','D',out.rho_in*(1+delta),'S',out.s_su2,fluid)+0.5*CoolProp.PropsSI('P','D',out.rho_in*(1-delta),'S',out.s_su2,fluid);
 end
 out.h_in = CoolProp.PropsSI('H','D',out.rho_in,'P',out.P_in,fluid);
@@ -372,6 +378,23 @@ out.Q_dot_amb = AU_amb*(T_w-T_amb);
 out.resE = abs((out.Q_dot_su + out.W_dot_loss - out.Q_dot_ex - out.Q_dot_amb)/(out.Q_dot_su + out.W_dot_loss));
 
 out.res = [out.resE];
+
+end
+
+function res = PolEffInverted(x, m_dot, P_su, P_ex, rho_su, param)
+
+N_exp = x;
+
+if length(param.coeffPol_ff) == 6
+    % if expander with constant speed -> quadratic function of Rp and rho_su
+    FF = max(0.2, min(param.coeffPol_ff(1) + param.coeffPol_ff(2)*(P_su/P_ex) + param.coeffPol_ff(3)*rho_su + param.coeffPol_ff(4)*(P_su/P_ex)^2 + param.coeffPol_ff(5)*(P_su/P_ex)*rho_su + param.coeffPol_ff(6)*(rho_su)^2, 5));
+elseif length(param.coeffPol_ff) == 10
+    % if expander with variable speed -> quadratic function of Rp, rho_su and N_exp
+    FF = max(0.2,min(param.coeffPol_ff(1) + param.coeffPol_ff(2)*(P_su/P_ex) + param.coeffPol_ff(3)*rho_su + param.coeffPol_ff(4)*(P_su/P_ex)^2 + param.coeffPol_ff(5)*(P_su/P_ex)*rho_su + param.coeffPol_ff(6)*(rho_su)^2 + param.coeffPol_ff(7)*N_exp + param.coeffPol_ff(8)*N_exp^2 + param.coeffPol_ff(9)*N_exp*(P_su/P_ex) + param.coeffPol_ff(10)*N_exp*rho_su,5));
+end
+
+N_exp_bis = 60*m_dot/(param.V_s*FF*rho_su);
+res = 1-N_exp/N_exp_bis;
 
 end
 

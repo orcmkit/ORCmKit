@@ -30,27 +30,27 @@ function out = HexSeries(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_
 %% DEMONSTRATION CASE
 if nargin == 0
     fluid_h = 'R245fa';
-    P_h_su = 3e5;
-    in_h_su = CoolProp.PropsSI('H', 'T', 90+273.15, 'P', P_h_su, fluid_h);
-    m_dot_h = 0.1;
+    P_h_su = 3.3646e+05;
+    in_h_su = 4.5433e+05;
+    m_dot_h = 0.2771;
     fluid_c = 'INCOMP::MPG-30%';
-    P_c_su = 2e5;
-    in_c_su = CoolProp.PropsSI('H', 'T', 20+273.15, 'P', P_c_su, fluid_c);
-    m_dot_c = 2.2;
-    in_hex1.modelType = 'CstEff';
-    in_hex1.type_h = 'H';
-    in_hex1.type_c = 'H';
-    in_hex1.epsilon_th = 0.1;
-    in_hex1.displayResults = 0;
-    in_hex1.displayTS = 0;
-    in_hex1.advancedUser = 1;
-    in_hex2.modelType = 'CstEff';
-    in_hex2.type_h = 'H';
-    in_hex2.type_c = 'H';
-    in_hex2.epsilon_th = 0.65;
-    in_hex2.displayResults = 0;
-    in_hex2.displayTS = 1;
-    in_hex2.advancedUser = 1;
+    P_c_su = 2.2600e+05;
+    Tsu = 303.7799;
+    in_c_su = CoolProp.PropsSI('H', 'T', Tsu, 'P', P_c_su, fluid_c);
+    m_dot_c = 0.7448;
+        
+    path = 'C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Microsol';
+
+    
+    CD_folder = [path '\Condenser\'];
+    load([CD_folder, 'ParametersCalibration_CD.mat'])
+    
+    SUB_folder = [path '\Subcooler\'];
+    load([SUB_folder, 'ParametersCalibration_SUB.mat'])
+    
+    in_hex1 = SUB_CstEff;
+    in_hex2 = CD_CstEff;
+    %5.3478e+04
 end
 
 %% MODELING OF 2 HEX IN SERIES 
@@ -58,13 +58,28 @@ Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c
 lb = 0;
 ub = Q_dot_max;
 f = @(x) hexseries_res(x, fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, in_hex1, in_hex2);
+
+% Q_vec= linspace(lb,ub,50);
+% for k = 1:50
+%     res(k) = f(Q_vec(k));
+% end
+% figure
+% plot(Q_vec, res)
 Q_dot_eff = zeroBrent ( lb, ub, 1e-6, 1e-6, f );
+% hold on
+% plot(Q_dot_eff, f(Q_dot_eff), 'xr');
+
+% options_fmincon = optimset('Disp','iter','Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6);
+%Q_dot_eff = fmincon(f, ub/10, [], [], [], [], lb, ub, [], options_fmincon);
+
 out = hexseries(Q_dot_eff, fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, in_hex1, in_hex2);
-if abs(out.res) < 1e-4
+if abs(out.res) < 1e-4 && out.hex2.flag > 0 && out.hex1.flag > 0
     out.flag = 1;
 else
     out.flag = -1;
 end
+% out.hex1.Q_dot_tot
+% out.hex2.Q_dot_tot
 
 end
 
@@ -93,5 +108,24 @@ elseif x ~= 0 && out_hex1.Q_dot_tot == 0
 else
     out.res = 1 - x/out_hex1.Q_dot_tot;
 end
+
+% out.in_h_mid = in_h_su - x/m_dot_h;
+% 
+% [out_hex1, TS_hex1] = HexModel(fluid_h, P_h_su, out.in_h_mid, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, in_hex1);
+% out.hex1 = out_hex1;
+% out.ts1 = TS_hex1;
+% out.in_c_mid = out_hex1.h_c_ex;
+% [out_hex2, TS_hex2] = HexModel(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, out.in_c_mid, m_dot_c, in_hex2);
+% out.hex2 = out_hex2;
+% out.ts2 = TS_hex2;
+% if x == 0 && out_hex2.Q_dot_tot == 0
+%     out.res = 0;
+% elseif x == 0 && out_hex2.Q_dot_tot ~= 0
+%     out.res = 1;
+% elseif x ~= 0 && out_hex2.Q_dot_tot == 0
+%     out.res = 1;
+% else
+%     out.res = 1 - x/out_hex2.Q_dot_tot;
+% end
 
 end
