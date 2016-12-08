@@ -1,4 +1,4 @@
-function [out,TS] = PumpModel(P_su, h_su, P_ex, fluid, N_pp, T_amb, param)
+function [out,TS] = PumpModel3(P_su, h_su, P_ex, fluid, N_pp, T_amb, param)
 
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
@@ -79,6 +79,8 @@ if nargin == 0
             param.V =1.4e-3;                %Volume inside the pump
             param.epsilon_is = 0.5;         %Cst isentropic efficiency [-]
             param.epsilon_vol = 0.8;        %Cst volumetric efficiency [-]
+            param.AU = 10;        %Cst volumetric efficiency [-]
+
         case 'PolEff'
             param.V_s = 1e-6;               %Machine swepts volume  [m^3]
             param.V =1.4e-3;                %Volume inside the pump
@@ -109,6 +111,9 @@ end
 if not(isfield(param,'V'))
     param.V =  0;
 end
+if not(isfield(param,'AU'))
+    param.AU =  0;
+end
 
 T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
 s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
@@ -124,10 +129,11 @@ if P_su < P_ex && N_pp > 0
             V_s = param.V_s;
             epsilon_is = param.epsilon_is;
             epsilon_vol = param.epsilon_vol;
+            AU = param.AU;
             m_dot = N_pp/60*V_s*epsilon_vol*rho_su;
             W_dot = m_dot*(h_ex_s-h_su)/epsilon_is;
             Q_dot = AU*(T_su - T_amb);
-            h_ex = h_su+W_dot/m_dot;
+            h_ex = h_su+(W_dot-Q_dot)/m_dot;
             if h_ex > param.h_min && h_ex < param.h_max
                 out.flag = 1;
             else
@@ -143,7 +149,9 @@ if P_su < P_ex && N_pp > 0
             epsilon_vol = max(0.01,min(a_vol(1) + a_vol(2)*(P_ex/P_su) + a_vol(3)*(N_pp/N_pp_nom) + a_vol(4)*(P_ex/P_su)^2 + a_vol(5)*(P_ex/P_su)*(N_pp/N_pp_nom) + a_vol(6)*(N_pp/N_pp_nom)^2,1));
             m_dot = N_pp/60*V_s*epsilon_vol*rho_su;
             W_dot = max(0,m_dot*(h_ex_s-h_su)/epsilon_is);
-            h_ex = h_su+W_dot/m_dot;
+            AU = param.AU;
+            Q_dot = AU*(T_su - T_amb);
+            h_ex = h_su+(W_dot-Q_dot)/m_dot;
             if h_ex > param.h_min && h_ex < param.h_max
                 out.flag = 1;
             else
@@ -159,7 +167,9 @@ if P_su < P_ex && N_pp > 0
             epsilon_vol = m_dot/(N_pp/60*V_s*rho_su);
             W_dot = W_dot_loss + K_0_loss*m_dot/rho_su*(P_ex-P_su);
             epsilon_is = (m_dot*(h_ex_s-h_su))/W_dot;
-            h_ex = h_su+W_dot/m_dot;
+            AU = param.AU;
+            Q_dot = AU*(T_su - T_amb);
+            h_ex = h_su+(W_dot-Q_dot)/m_dot;
             if h_ex > param.h_min && h_ex < param.h_max
                 out.flag = 1;
             else
@@ -180,6 +190,7 @@ if out.flag > 0
     out.T_ex = CoolProp.PropsSI('T','P',P_ex,'H',out.h_ex,fluid);
     out.m_dot = m_dot;
     out.W_dot = W_dot;
+    out.Q_dot = Q_dot;
     out.epsilon_is = epsilon_is;
     out.epsilon_vol = epsilon_vol;
     out.M = (CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
@@ -189,6 +200,7 @@ else
     h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
     out.m_dot = N_pp/60* param.V_s*rho_su;
     out.W_dot = m_dot*(h_ex_s-h_su);
+    out.Q_dot = 0;
     out.epsilon_is = 1;
     out.epsilon_vol = 1;
     out.M =(CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;

@@ -83,7 +83,7 @@ if nargin == 0
     P_ex = 2.471310061849047e+05;               %Exhaust pressure       [Pa]
     T_amb = 298.1500;              %Ambient temperature    [K]
     param.displayResults = 1;                   %Flag to control the resustl display [0/1]
-    param.modelType = 'PolEff';                %Type of model          [CstEff, PolEff, SemiEmp]
+    param.modelType = 'SemiEmp';                %Type of model          [CstEff, PolEff, SemiEmp]
     param.gamma = 0.8;
     switch param.modelType
         case 'CstEff'

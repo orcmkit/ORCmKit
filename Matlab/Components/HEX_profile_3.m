@@ -62,7 +62,11 @@ if strcmp(param.type_h,'H') && strcmp(param.type_c,'H')  %% CASE 1 : HOT FLUID A
     elseif round(h_h_l,decim) > round(h_h_su,decim)
         H_h_vec = [h_h_ex  h_h_su]; % if liquid-phase only
     elseif (round(h_h_l,decim) < round(h_h_ex,decim)) && (round(h_h_v,decim) > round(h_h_su,decim)) 
-        H_h_vec = linspace(h_h_ex, h_h_su, param.n_tp_disc); % if two-phase only
+        if round(h_h_su,decim) > round(h_h_ex,decim)
+            H_h_vec = linspace(h_h_ex, h_h_su, param.n_tp_disc); % if two-phase only
+        else
+            H_h_vec = [h_h_ex, h_h_su];
+        end
     elseif (round(h_h_l,decim) < round(h_h_su,decim)) && (round(h_h_l,decim) > round(h_h_ex,decim))
         if (round(h_h_v,decim) < round(h_h_su,decim))
             H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_tp_disc)  h_h_su]; % if liquid, two phase and vapour
@@ -94,7 +98,11 @@ if strcmp(param.type_h,'H') && strcmp(param.type_c,'H')  %% CASE 1 : HOT FLUID A
     elseif round(h_c_l,decim) > round(h_c_ex,decim)
         H_c_vec = [h_c_su  h_c_ex]; % if liquid only
     elseif (round(h_c_l,decim) < round(h_c_su,decim)) && (round(h_c_v,decim) > round(h_c_ex,decim))
-        H_c_vec = linspace(h_c_su,  h_c_ex, param.n_tp_disc); % if two-phase only
+        if round(h_c_su,decim) < round(h_c_ex,decim)
+            H_c_vec = linspace(h_c_su,  h_c_ex, param.n_tp_disc); % if two-phase only
+        else
+            H_c_vec = [h_c_su,  h_c_ex];
+        end
     elseif (round(h_c_l,decim) > round(h_c_su,decim)) && (round(h_c_l,decim) < round(h_c_ex,decim))
         if (round(h_c_v,decim) < round(h_c_ex,decim))
             H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_tp_disc) h_c_ex]; % if liquid, two phase and vapour

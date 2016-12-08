@@ -135,57 +135,172 @@ function [out,TS] = HexModel(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su,
 if nargin == 0    
     % Define a demonstration case if HexModel.mat is not executed externally  
     
-    fluid_h = 'R245fa';                                                     % Nature of the hot fluid           [-]
-    m_dot_h = 0.1;                                                         % Mass flow rat of the hot fluid    [kg/s]
-    P_h_su =  3e5;                                                          % Supply pressure of the hot fluid  [Pa]
-    in_h_su = CoolProp.PropsSI('H','P',P_h_su,'T',70+273.15, fluid_h);      % Supply h or T of the hot fluid  	[J/kg pr K]
+    fluid_h = 'PiroblocBasic';                                               % Nature of the hot fluid           [-]
+    m_dot_h = 0.05;                                                          % Mass flow rat of the hot fluid    [kg/s]
+    P_h_su =  2e5;                                                          % Supply pressure of the hot fluid  [Pa]
+    in_h_su = 370.5;% CoolProp.PropsSI('H','P',P_h_su,'T',70+273.15, fluid_h);      % Supply h or T of the hot fluid  	[J/kg pr K]
     fluid_c = 'R245fa';                                                     % Nature of the cold fluid        	[-]
-    m_dot_c = 0.1;                                                      % Mass flow rat of the cold fluid  	[kg/s]
-    P_c_su = 18e5;                                                           % Supply pressure of the cold fluid	[Pa]
-    in_c_su = CoolProp.PropsSI('H','P',P_c_su,'T',20+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
+    m_dot_c = 0.0349;                                                      % Mass flow rat of the cold fluid  	[kg/s]
+    P_c_su = 8.67e5;                                                           % Supply pressure of the cold fluid	[Pa]
+    in_c_su = 2.5073e+05; %CoolProp.PropsSI('H','P',P_c_su,'T',20+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
     
     % Example of impletenation in the case of a correlation-based model for a plate heat exchanger
+%     param.n_tp_disc = 10;
+%     param.modelType = 'hConvCor';
+%     param.correlation_h.type_1phase = 'Martin';
+%     param.correlation_h.type_2phase = 'Han_condensation';
+%     param.correlation_h.void_fraction = 'Homogenous';
+% 
+%     param.correlation_c.type_1phase = 'Martin';
+%     param.correlation_c.type_2phase = 'Han_boiling';
+%     param.type_h = 'T';   
+%     param.type_c = 'H';   
+    
+    L_phex_ev = 0.519-0.06;
+    W_phex_ev = 0.191;
+    pitch_p_ev = 0.0022;
+    th_p_ev = 0.0004;
+    b_p_ev = pitch_p_ev-th_p_ev;
+    Np_phex_ev = 100;
+    Nc_wf_ev = ceil((Np_phex_ev-1)/2);
+    Nc_sf_ev = floor((Np_phex_ev-1)/2);
+    CS_ev = W_phex_ev*b_p_ev;
+%     A_tot_ev = (Np_phex_ev-2)*L_phex_ev*W_phex_ev;
+    A_eff_ev = 9.8;
+    Np_eff_ev = Np_phex_ev-2;
+    phi_ev = (A_eff_ev/Np_eff_ev)/(W_phex_ev*L_phex_ev);
+    
+    pitch_co_ev = 0.007213; %computed based on phi_ev and b_phex_ev
+    Dh_ev = 2*b_p_ev/phi_ev;
+    param.theta = 30*pi/180;
+    param.type_h = 'T';
+    param.type_c = 'H';
+    param.A_h_tot = A_eff_ev;
+    param.A_c_tot = A_eff_ev;
+    param.V_h_tot = 0.009;
+    param.V_c_tot = 0.009;
+    param.L_hex = L_phex_ev;
+    param.pitch_co = pitch_co_ev;
+    param.phi =  phi_ev;
+    param.Dh_c = Dh_ev;
+    param.Dh_h = Dh_ev;
+    param.CS_c = CS_ev;
+    param.CS_h = CS_ev;
+    param.n_canals_c = Nc_wf_ev;
+    param.n_canals_h = Nc_sf_ev;
     param.n_tp_disc = 10;
     param.modelType = 'hConvCor';
-    param.correlation_h.type_1phase = 'Martin';
-    param.correlation_h.type_2phase = 'Longo_condensation';
-    param.correlation_c.type_1phase = 'Martin';
+    param.correlation_h.type_1phase = 'Wanniarachchi';
+    param.correlation_h.type_2phase = 'Han_condensation';
+    param.correlation_c.type_1phase = 'Wanniarachchi';
     param.correlation_c.type_2phase = 'Almalfi_boiling';
-    param.type_h = 'H';   
-    param.type_c = 'H';   
+    param.correlation_h.void_fraction = 'Homogenous';
+    param.correlation_c.void_fraction = 'Homogenous';%'Hughmark';
     
-    L_phex = 0.313;
-    W_phex = 0.1128;
-    pitch_pl_phex = 0.001;
-    pitch_co_phex = 0.005;
-    th_phex = 0.0003;
-    b_phex = pitch_pl_phex-th_phex;
-    Np_phex = 45;
-    Nc_h = ceil((Np_phex-1)/2);
-    Nc_c = floor((Np_phex-1)/2);
-    Dh = 2*b_phex;
-    CS = W_phex*b_phex;
-    A_tot = (Np_phex-2)*L_phex*W_phex;
-    param.L_hex = L_phex;
-    param.A_h_tot = A_tot;
-    param.A_c_tot = A_tot;  
-    param.pitch_co = pitch_co_phex;
-    param.phi = 1.1;
-    param.n_canals_h = Nc_h;
-    param.n_canals_c = Nc_c;   
-    param.CS_h = CS;
-    param.CS_c = CS;
-    param.Dh_h = Dh;
-    param.Dh_c = Dh;
-    param.theta = 60*pi/180;
-    param.displayResults = 0;
-    param.displayTS = 1;
-    param.generateTS = 1;
-    
+%     L_phex = 0.313;
+%     W_phex = 0.1128;
+%     pitch_pl_phex = 0.001;
+%     pitch_co_phex = 0.005;
+%     th_phex = 0.0003;
+%     b_phex = pitch_pl_phex-th_phex;
+%     Np_phex = 45;
+%     Nc_h = ceil((Np_phex-1)/2);
+%     Nc_c = floor((Np_phex-1)/2);
+%     Dh = 2*b_phex;
+%     CS = W_phex*b_phex;
+%     A_tot = (Np_phex-2)*L_phex*W_phex;
+%     param.L_hex = L_phex;
+%     param.A_h_tot = A_tot;
+%     param.A_c_tot = A_tot;  
+%     param.V_h_tot = 0.001;
+%     param.V_c_tot = 0.001;  
+%     param.pitch_co = pitch_co_phex;
+%     param.phi = 1.1;
+%     param.n_canals_h = Nc_h;
+%     param.n_canals_c = Nc_c;   
+%     param.CS_h = CS;
+%     param.CS_c = CS;
+%     param.Dh_h = Dh;
+%     param.Dh_c = Dh;
+%     param.theta = 60*pi/180;
+
+%     fluid_h = 'R245fa';                                               % Nature of the hot fluid           [-]
+%     m_dot_h = 0.0269;                                                          % Mass flow rat of the hot fluid    [kg/s]
+%     in_h_su =  4.3973e+05;                                                          % Supply pressure of the hot fluid  [Pa]
+%     P_h_su = 3.1811e+05;% CoolProp.PropsSI('H','P',P_h_su,'T',70+273.15, fluid_h);      % Supply h or T of the hot fluid  	[J/kg pr K]
+%     fluid_c = 'air';                                                     % Nature of the cold fluid        	[-]
+%     m_dot_c = 0.2222;                                                      % Mass flow rat of the cold fluid  	[kg/s]
+%     P_c_su = 100000;                                                           % Supply pressure of the cold fluid	[Pa]
+%     in_c_su = 4.1975e+05; %CoolProp.PropsSI('H','P',P_c_su,'T',20+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
+% 
+% 
+% Rt_in =  8.5/2/1000;    % internal radius of the tube [m] 8.5
+% Rt_ex = 9.5/2/1000;     % external radius of the tube [m] 9.5
+% Lt = 1120/1000;         % length of the tube [m]
+% N_pass = 12;            % Number of pass for each pipe [-]
+% N_pipes = 13;           % Number of pipes [-]
+% N_raw = 4;           % Number of pipes [-]
+% pitch_fin = 3.5/1000;   % space between the fins [m]
+% N_fin = floor(Lt/pitch_fin);% Number of fins [-]
+% W_fin = 980/1000;       % Width of the fins [m]
+% L_fin = 130/1000;       % Heigh of the fins [m]
+% th_fin = 0.5/1000;      % Thickness of the fins [m]
+% X_f_l = 26.5/1000;      % Longitudinal distance between the tubes [m]
+% X_f_t = 26.3/1000;      % Transversal distance between the tubes [m]
+% X_f_d = sqrt((0.5*X_f_t)^2+X_f_l^2); % Diagonal distance between the tubes [m]
+% N_row_1line = N_pass*N_pipes/N_raw;          % Number of tubes in one raw
+% CS_wf = pi*Rt_in^2;
+% Dh_wf = 2*Rt_in;
+% A_wf = 2*pi*Rt_in*Lt*N_pipes*N_pass;
+% CS_sf = min((X_f_t - 2*Rt_ex), 2*(X_f_d - 2*Rt_ex))*N_row_1line*Lt -(W_fin*th_fin*N_fin) ;
+% Dh_sf = 2*Rt_ex;
+% A_fin = 2*N_fin*W_fin*L_fin;
+% A_sf = A_fin+2*pi*Rt_ex*(Lt-N_fin*th_fin)*N_pipes*N_pass;
+% B_fin = X_f_t/2;
+% H_fin = 0.5*sqrt((0.5*X_f_t)^2 + X_f_l^2);
+% omega_A = A_sf/A_wf;
+% omega_f = A_fin/A_sf;
+% omega_t = A_sf/(2*pi*Rt_ex*Lt*N_pipes*N_pass);
+% k_fin = 205;
+%     
+param.displayResults = 0;
+param.displayTS = 1;
+param.generateTS = 1;
+% 
+% param.type_h = 'H';
+% param.type_c = 'H';
+% param.A_h_tot = A_wf;
+% param.A_c_tot = A_sf;
+% param.V_h_tot = 0.014;
+% param.V_c_tot = 0.7585;
+% param.fin_h = 'none';
+% param.fin_c.k = k_fin;
+% param.fin_c.th = th_fin;
+% param.fin_c.r = Rt_ex;
+% param.fin_c.B = B_fin;
+% param.fin_c.H = H_fin;
+% param.fin_c.omega_f = omega_f;
+% param.fin_c.omega_t = omega_t;
+% param.Dh_c = Dh_sf;
+% param.Dh_h = Dh_wf;
+% param.CS_c = CS_sf;
+% param.CS_h = CS_wf;
+% param.n_canals_c = N_pipes;
+% param.n_canals_h = 1;
+% param.n_tp_disc = 10;
+% param.modelType = 'hConvCor';
+% param.correlation_h.type_1phase = 'Gnielinski';
+% param.correlation_h.type_2phase = 'Cavallini_condensation';
+% param.correlation_c.type_1phase = 'VDI_finned_tubes_staggered';
+% param.correlation_c.type_2phase = 'VDI_finned_tubes_staggered';
+% param.correlation_h.void_fraction = 'Homogenous';
+% param.correlation_c.void_fraction = 'Homogenous';
+
+
     % For another example of implementation, please load the .mat file
     % "HEX_param_examples" and select the desired modelling approach
-    load('HEX_param_examples.mat')
-    param = Example_HEX_hConvVar;
+%     load('HEX_param_examples.mat')
+%     param = Example_HEX_hConvVar;
 end
 
 tstart_hex = tic;
@@ -225,12 +340,28 @@ if strcmp(param.type_c,'H')
 elseif strcmp(param.type_c,'T')
     T_c_su = in_c_su;
 end
+
 flag_reverse = 0;
 if T_h_su<T_c_su  
-    [fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h);
-    [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c);    
-    [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int);
-    flag_reverse = 1;
+    if strcmp(param.modelType, 'CstEff')
+        [fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, type_h_int,  V_h_int_tot ] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.type_h, param.V_h_tot);
+        [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.type_h,  param.V_h_tot] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.type_c, param.V_c_tot);
+        [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.type_c,  param.V_c_tot] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, type_h_int,V_h_int_tot);
+        flag_reverse = 1;
+        
+    elseif strcmp(param.modelType, 'PolEff')
+        [fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, type_h_int,  V_h_int_tot] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.type_h, param.V_h_tot);
+        [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.type_h, param.V_h_tot] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.type_c,  param.V_c_tot);
+        [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.type_c, param.V_c_tot] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, type_h_int, V_h_int_tot);
+        param.CoeffPolEff = param.CoeffPolEff([1 3 2 6 5 4]);
+        flag_reverse = 1;
+        
+    elseif strcmp(param.modelType, 'hConvVar')
+        [fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h);
+        [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c);
+        [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int);
+        flag_reverse = 1;
+    end
 end
 
 if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
@@ -521,6 +652,15 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                 param.A_c_tot = param.A_tot;
             end
             
+            if isfield(param,'n')
+                param.n_h_liq = param.n;
+                param.n_c_liq = param.n;
+                param.n_h_tp = param.n;
+                param.n_c_tp = param.n;
+                param.n_h_vap = param.n;
+                param.n_c_vap = param.n;
+            end
+            
             % Power and enthalpy vectors calculation
             Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param); %Compute the maximum heat power that can be transferred between the two media
             out_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param); %Evaluate temperature profile based on Q_dot_max
@@ -564,22 +704,46 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             % Mass calculation
             out.V_h_vec = param.V_h_tot*(out.A_h./sum(out.A_h));
             out.V_c_vec = param.V_c_tot*(out.A_h./sum(out.A_h));
-            
+
             for i = 1: length(out.V_h_vec)
+                
                 if strcmp(param.type_h,'H')
-                    if strcmp(out.type_zone_h{i},  'tp')                        
-                        alpha_mass_h = param.alpha_mass_h;
-                        out.M_h_vec(i) = out.V_h_vec(i)*(alpha_mass_h*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h)+ (1-alpha_mass_h)*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h));                       
+                    if strcmp(out.type_zone_h{i},  'tp') 
+                        if strcmp(param.type_mass,'Sivi_integrated')
+                            rho_h_vap = CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h);
+                            rho_h_liq = CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h);
+                            x2 = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h);
+                            x1 = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+                            S =  (rho_h_vap/rho_h_liq)^(-1/3);
+                            K = rho_h_vap/rho_h_liq*S;
+                            alpha_mass_h = -1*((K*(log(((x2-1)*K-x2)/((x1-1)*K-x1))+x2-x1))+(x1-x2))/(((x2-x1)*K^2)+(2*K*(x1-x2))+(x2-x1));
+                            out.M_h_vec(i) = out.V_h_vec(i)*(alpha_mass_h*rho_h_vap+ (1-alpha_mass_h)*rho_h_liq);
+                        elseif strcmp(param.type_mass,'Personnal')
+                            alpha_mass_h = param.alpha_mass_h;
+                            out.M_h_vec(i) = out.V_h_vec(i)*(alpha_mass_h*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h)+(1-alpha_mass_h)*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h));
+                        end                        
                     else
                         out.M_h_vec(i) = out.V_h_vec(i)*(CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h)+CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))/2;
                     end
                 else
                     out.M_h_vec(i) = out.V_h_vec(i)*sf_PropsSI_bar('D', out.T_h_vec(i),  out.T_h_vec(i+1), P_h_su, fluid_h);
                 end
+                
                 if strcmp(param.type_c,'H')
                     if strcmp(out.type_zone_c{i},  'tp')
-                        alpha_mass_c = param.alpha_mass_c;
-                        out.M_c_vec(i) = out.V_c_vec(i)*(alpha_mass_c*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c)+(1-alpha_mass_c)*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c));                        
+                        if strcmp(param.type_mass,'Sivi_integrated')
+                            rho_c_vap = CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c);
+                            rho_c_liq = CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c);
+                            x2 = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c);
+                            x1 = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+                            S =  (rho_c_vap/rho_c_liq)^(-1/3);
+                            K = rho_c_vap/rho_c_liq*S;
+                            alpha_mass_c = -1*((K*(log(((x2-1)*K-x2)/((x1-1)*K-x1))+x2-x1))+(x1-x2))/(((x2-x1)*K^2)+(2*K*(x1-x2))+(x2-x1));
+                            out.M_c_vec(i) = out.V_c_vec(i)*(alpha_mass_c*rho_c_vap+ (1-alpha_mass_c)*rho_c_liq);
+                        elseif strcmp(param.type_mass,'Personnal')
+                            alpha_mass_c = param.alpha_mass_c;
+                            out.M_c_vec(i) = out.V_c_vec(i)*(alpha_mass_c*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c)+(1-alpha_mass_c)*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c));
+                        end
                     else
                         out.M_c_vec(i) = out.V_c_vec(i)*(CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c)+CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c))/2;
                     end
@@ -614,6 +778,12 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                 param.A_h_tot = param.A_tot;
                 param.A_c_tot = param.A_tot;
             end
+            if not(isfield(param, 'fact_corr_sp'))                
+                param.fact_corr_sp = 1;
+            end
+            if not(isfield(param, 'fact_corr_2p'))                
+                param.fact_corr_2p = 1;
+            end            
             
             % Power and enthalpy vectors calculation
             Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param); %Compute the maximum heat power that can be transferred between the two media
@@ -640,7 +810,7 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             out.hConv_c_liq_mean = mean(out.hConv_c(strcmp(out.type_zone_c, 'liq')));
             out.hConv_c_tp_mean = mean(out.hConv_c(strcmp(out.type_zone_c, 'tp')));
             out.hConv_c_vap_mean = mean(out.hConv_c(strcmp(out.type_zone_c, 'vap'))); 
-            
+
             
             % Entropy vector calculation
             [out.s_h_vec, out.s_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
@@ -648,11 +818,13 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                 if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
                     for i = 1: length(out.H_h_vec)
                         out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+                        out.q_h_vec(i) = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
                     end
                 end
                 if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
                     for i = 1: length(out.H_c_vec)
                         out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+                        out.q_c_vec(i) = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
                     end
                 end
             end
@@ -661,57 +833,76 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             out.V_h_vec = param.V_h_tot*(out.A_h./sum(out.A_h));
             out.V_c_vec = param.V_c_tot*(out.A_h./sum(out.A_h));
             
-%             for i = 1: length(out.V_h_vec)
-%                 if strcmp(param.type_h,'H')
-%                     if strcmp(out.type_zone_h{i},  'tp')
-%                         
-%                         alpha_mass_h = param.alpha_mass_h;%*(m_dot_h/param.m_dot_h_n)^param.n_alpha_h;
-%                         out.M_h_vec(i) = out.V_h_vec(i)*(alpha_mass_h*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h)+ (1-alpha_mass_h)*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h));
-%                         
-%                         %f_void = @(q) VoidFractionSivi(q, CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h), CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h));
-%                         %Weight = integral(f_void, CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h), CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))
-%                         %out.M_h_vec(i) = out.V_h_vec(i)/(CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h)-CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h))*(CoolProp.PropsSI('Q','P',P_h_su,'Q',0,fluid_h)*Weight + CoolProp.PropsSI('Q','P',P_h_su,'Q',1,fluid_h)*(1-Weight));
-%                         
-% %                         q_h_1iq = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h)
-% %                         q_h_vap = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h)
-% %                         rho_h_0 = CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h);
-% %                         rho_h_1 = CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h);
-% %                         f_void = @(q) VoidFractionRD(q, rho_h_1, rho_h_0, param.S_h);
-% %                         Weight_h = integral(f_void, q_h_1iq, q_h_vap)
-% %                         out.M_h_vec(i) = out.V_h_vec(i)/(q_h_vap-q_h_1iq)*(rho_h_0*Weight_h + rho_h_1*(1-Weight_h));
-%                        
-%                     else
-%                         out.M_h_vec(i) = out.V_h_vec(i)*(CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h)+CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))/2;
-%                     end
-%                 else
-%                     out.M_h_vec(i) = out.V_h_vec(i)*sf_PropsSI_bar('D', out.T_h_vec(i),  out.T_h_vec(i+1), P_h_su, fluid_h);
-%                 end
-%                 if strcmp(param.type_c,'H')
-%                     if strcmp(out.type_zone_c{i},  'tp')
-%                         alpha_mass_c = param.alpha_mass_c;%*(m_dot_c/param.m_dot_c_n)^param.n_alpha_c;
-%                         out.M_c_vec(i) = out.V_c_vec(i)*(alpha_mass_c*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c)+(1-alpha_mass_c)*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c));
-%                         %f_void = @(q) VoidFractionSivi(q, CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c), CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c));                        
-%                         %Weight = integral(f_void, CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c), CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c))
-%                         %out.M_c_vec(i) = out.V_c_vec(i)/(CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c)-CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c))*(CoolProp.PropsSI('Q','P',P_c_su,'Q',0,fluid_c)*Weight + CoolProp.PropsSI('Q','P',P_c_su,'Q',1,fluid_c)*(1-Weight));
-%                         
-% %                         q_c_vap = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c)
-% %                         q_c_1iq = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c)
-% %                         rho_c_0 = CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c);
-% %                         rho_c_1 = CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c);
-% %                         f_void = @(q) VoidFractionRD(q, rho_c_1, rho_c_0, param.S_c);
-% %                         Weight_c = integral(f_void, q_c_1iq, q_c_vap)
-% %                         out.M_c_vec(i) = out.V_c_vec(i)/(q_c_vap-q_c_1iq)*(rho_c_0*Weight_c + rho_c_1*(1-Weight_c));
-% 
-%                     else
-%                         out.M_c_vec(i) = out.V_c_vec(i)*(CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c)+CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c))/2;
-%                     end
-%                 else
-%                     out.M_c_vec(i) = out.V_c_vec(i)*sf_PropsSI_bar('D', out.T_c_vec(i),  out.T_c_vec(i+1), P_c_su, fluid_c);
-%                 end
-%             end
-%             out.M_h = sum(out.M_h_vec);
-%             out.M_c = sum(out.M_c_vec);
-%             
+            for i = 1: length(out.V_h_vec)
+                if strcmp(param.type_h,'H')
+                    if strcmp(out.type_zone_h{i},  'tp')
+                             
+                        q_h_1iq = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+                        q_h_vap = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h);
+                        rho_h_liq = CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h);
+                        rho_h_vap = CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h);
+                        switch param.correlation_h.void_fraction
+                            case 'Homogenous'
+                                f_void = @(q) VoidFraction_homogenous(q, rho_h_vap,  rho_h_liq);
+                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
+                                
+                            case 'Sivi'
+                                f_void = @(q) VoidFraction_Sivi(q, rho_h_vap,  rho_h_liq);
+                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
+                                
+                            case 'Hughmark'
+                                mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
+                                mu_h_vap = CoolProp.PropsSI('V','P',P_h_su,'Q',1,fluid_h);
+                                f_void = @(q) VoidFraction_Hughmark(q, rho_h_vap,  rho_h_liq, mu_h_vap, mu_h_liq, param.Dh_h,  m_dot_h/param.n_canals_h/param.CS_h);
+                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);                                
+                        end
+
+                        out.M_h_vec(i) = out.V_h_vec(i)/(q_h_vap-q_h_1iq)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                  
+                    else
+                        out.M_h_vec(i) = out.V_h_vec(i)*(CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h)+CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))/2;
+                    end
+                else
+                    out.M_h_vec(i) = out.V_h_vec(i)*sf_PropsSI_bar('D', out.T_h_vec(i),  out.T_h_vec(i+1), P_h_su, fluid_h);
+                end
+
+                if strcmp(param.type_c,'H')
+                    if strcmp(out.type_zone_c{i},  'tp')
+                        
+                        q_c_1iq = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+                        q_c_vap = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c);
+                        rho_c_liq = CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c);
+                        rho_c_vap = CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c);
+                        switch param.correlation_c.void_fraction
+                            case 'Homogenous'
+                                f_void = @(q) VoidFraction_homogenous(q, rho_c_vap,  rho_c_liq);
+                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
+                                
+                            case 'Sivi'
+                                f_void = @(q) VoidFraction_Sivi(q, rho_c_vap,  rho_c_liq);
+                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
+                                
+                            case 'Hughmark'
+                                mu_c_liq = CoolProp.PropsSI('V','P',P_c_su,'Q',0,fluid_c);
+                                mu_c_vap = CoolProp.PropsSI('V','P',P_c_su,'Q',1,fluid_c);
+                                f_void = @(q) VoidFraction_Hughmark(q, rho_c_vap,  rho_c_liq, mu_c_vap, mu_c_liq, param.Dh_c,  m_dot_c/param.n_canals_c/param.CS_c);
+                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
+
+                        end
+                        
+                        out.M_c_vec(i) = out.V_c_vec(i)/(q_c_vap-q_c_1iq)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+                        
+                    else
+                        out.M_c_vec(i) = out.V_c_vec(i)*(CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c)+CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c))/2;
+                    end
+                else
+                    out.M_c_vec(i) = out.V_c_vec(i)*sf_PropsSI_bar('D', out.T_c_vec(i),  out.T_c_vec(i+1), P_c_su, fluid_c);
+                end
+            end
+               
+            out.M_h = sum(out.M_h_vec);
+            out.M_c = sum(out.M_c_vec);
+             
             % Flag evaluation 
             if out.resA <1e-4
                 out.flag = 1;
@@ -797,7 +988,7 @@ if flag_reverse
     [out.M_h_vec, out.M_c_vec] = deal(flip(out.M_c_vec), flip(out.M_h_vec));   
     [out.M_h, out.M_c] = deal(out.M_c, out.M_h);          
     out.x_vec = (out.H_h_vec-out.H_h_vec(1))./(out.H_h_vec(end)-out.H_h_vec(1));
-    if out.flag ~= 3 &&  out.flag ~= -3
+    if strcmp(param.modelType, 'hConvVar') && out.flag ~= 3 &&  out.flag ~= -3
         [out.hConv_h, out.hConv_c] = deal(flip(out.hConv_c), flip(out.hConv_h));
         out.DTlog = flip(out.DTlog);
         [out.eff_h, out.eff_c] = deal(flip(out.eff_c), flip(out.eff_h));
@@ -959,21 +1150,21 @@ for j = 1:length(out.T_h_vec)-1
     if strcmp(info.type_h, 'H')
         if isempty(strfind(fluid_h, 'INCOMP:'))
             if (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) < CoolProp.PropsSI('H','P',P_h_su,'Q',0,fluid_h)
-                out.hConv_h(j) = info.hConv_h_liq_n*(m_dot_h/info.m_dot_h_n)^info.n;
+                out.hConv_h(j) = info.hConv_h_liq_n*(m_dot_h/info.m_dot_h_n)^info.n_h_liq;
                 out.type_zone_h{j} = 'liq';
             elseif (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) > CoolProp.PropsSI('H','P',P_h_su,'Q',1,fluid_h)
-                out.hConv_h(j) = info.hConv_h_vap_n*(m_dot_h/info.m_dot_h_n)^info.n;
+                out.hConv_h(j) = info.hConv_h_vap_n*(m_dot_h/info.m_dot_h_n)^info.n_h_vap;
                 out.type_zone_h{j} = 'vap';
             else
-                out.hConv_h(j) = info.hConv_h_tp_n*(m_dot_h/info.m_dot_h_n)^info.n;
+                out.hConv_h(j) = info.hConv_h_tp_n*(m_dot_h/info.m_dot_h_n)^info.n_h_tp;
                 out.type_zone_h{j} = 'tp';
             end
         else
-            out.hConv_h(j) = info.hConv_h_liq_n*(m_dot_h/info.m_dot_h_n)^info.n;
+            out.hConv_h(j) = info.hConv_h_liq_n*(m_dot_h/info.m_dot_h_n)^info.n_h_liq;
             out.type_zone_h{j} = 'liq';
         end
     elseif strcmp(info.type_h, 'T')
-        out.hConv_h(j) = info.hConv_h_liq_n*(m_dot_h/info.m_dot_h_n)^info.n;
+        out.hConv_h(j) = info.hConv_h_liq_n*(m_dot_h/info.m_dot_h_n)^info.n_h_liq;
         out.type_zone_h{j} = 'liq';
     end
     
@@ -981,21 +1172,21 @@ for j = 1:length(out.T_h_vec)-1
     if strcmp(info.type_c, 'H')
         if isempty(strfind(fluid_c, 'INCOMP:'))
             if (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) < CoolProp.PropsSI('H','P',P_c_su,'Q',0,fluid_c)
-                out.hConv_c(j) = info.hConv_c_liq_n*(m_dot_c/info.m_dot_c_n)^info.n;
+                out.hConv_c(j) = info.hConv_c_liq_n*(m_dot_c/info.m_dot_c_n)^info.n_c_liq;
                 out.type_zone_c{j} = 'liq';
             elseif (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) > CoolProp.PropsSI('H','P',P_c_su,'Q',1,fluid_c)
-                out.hConv_c(j) = info.hConv_c_vap_n*(m_dot_c/info.m_dot_c_n)^info.n;
+                out.hConv_c(j) = info.hConv_c_vap_n*(m_dot_c/info.m_dot_c_n)^info.n_c_vap;
                 out.type_zone_c{j} = 'vap';
             else
-                out.hConv_c(j) = info.hConv_c_tp_n*(m_dot_c/info.m_dot_c_n)^info.n;
+                out.hConv_c(j) = info.hConv_c_tp_n*(m_dot_c/info.m_dot_c_n)^info.n_c_tp;
                 out.type_zone_c{j} = 'tp';
             end
         else
-            out.hConv_c(j) = info.hConv_c_liq_n*(m_dot_c/info.m_dot_c_n)^info.n;
+            out.hConv_c(j) = info.hConv_c_liq_n*(m_dot_c/info.m_dot_c_n)^info.n_c_liq;
             out.type_zone_c{j} = 'liq';
         end
     elseif strcmp(info.type_c, 'T')
-        out.hConv_c(j) = info.hConv_c_liq_n*(m_dot_c/info.m_dot_c_n)^info.n;
+        out.hConv_c(j) = info.hConv_c_liq_n*(m_dot_c/info.m_dot_c_n)^info.n_c_liq;
         out.type_zone_c{j} = 'liq';
     end
     out.DTlog(j) = deltaT_log(out.T_h_vec(j+1), out.T_h_vec(j),out.T_c_vec(j), out.T_c_vec(j+1));
@@ -1034,6 +1225,7 @@ function res = HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_do
 out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot), info);
 
 res = out.resA;
+
 end
 
 function out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info)
@@ -1105,7 +1297,7 @@ for j = 1:length(out.T_h_vec)-1
                     f_90 = 9.75/Re_h^0.289;
                 end               
                 f_h = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
-                Nu_h = 0.205*(Pr_h^0.33333333)*(f_h*Re_h^2*sin(2*info.theta))^0.374;
+                Nu_h = info.fact_corr_sp*0.205*(Pr_h^0.33333333)*(f_h*Re_h^2*sin(2*info.theta))^0.374;
                 out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
                 
             case 'Wanniarachchi'
@@ -1121,9 +1313,9 @@ for j = 1:length(out.T_h_vec)-1
                 end
                 G_h = m_dot_h/info.n_canals_h/info.CS_h;
                 Re_h = G_h*info.Dh_h/mu_h;
-                j_Nu_h_t = 12.6*(pi/2-info.theta)^(-1.142)*Re_h^(0.646+0.00111*(pi/2-info.theta));                
-                j_Nu_h_l = 3.65*(pi/2-info.theta)^(-0.455)*Re_h^-0.339;
-                Nu_h = (j_Nu_h_l^3 + j_Nu_h_t^3)^(1/3)*Pr_h^(1/3);
+                j_Nu_h_t = 12.6*(90-info.theta*180/pi)^(-1.142)*Re_h^(0.646+0.00111*(90-info.theta*180/pi));                
+                j_Nu_h_l = 3.65*(90-info.theta*180/pi)^(-0.455)*Re_h^-0.339;
+                Nu_h = info.fact_corr_sp*(j_Nu_h_l^3 + j_Nu_h_t^3)^(1/3)*Pr_h^(1/3);
                 out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
                 
             case 'Thonon'
@@ -1152,9 +1344,32 @@ for j = 1:length(out.T_h_vec)-1
                     C = 0.2946;
                     m = 0.7;
                 end
-                Nu_h = C*Re_h^m*Pr_h^0.33333333;
+                Nu_h = info.fact_corr_sp*C*Re_h^m*Pr_h^0.33333333;
                 out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
                 
+            case 'Gnielinski_and_Sha'
+                if strcmp(info.type_h, 'H')
+                    mu_h = CoolProp.PropsSI('V', 'H', (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)), 'P', P_h_su, fluid_h);
+                    Pr_h = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)), 'P', P_h_su, fluid_h);
+                    k_h = CoolProp.PropsSI('L', 'H', (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)), 'P', P_h_su, fluid_h);
+                elseif strcmp(info.type_h, 'T')
+                    cp_h = sf_PropsSI_bar('C', out.T_h_vec(j), out.T_h_vec(j+1), P_h_su, fluid_h);
+                    k_h = sf_PropsSI_bar('L', out.T_h_vec(j), out.T_h_vec(j+1), P_h_su, fluid_h);
+                    mu_h = sf_PropsSI_bar('V', out.T_h_vec(j), out.T_h_vec(j+1), P_h_su, fluid_h);
+                    Pr_h = cp_h*mu_h/k_h;
+                end
+                G_h = m_dot_h/info.n_canals_h/info.CS_h;
+                
+                Re_h = G_h*info.Dh_h/mu_h;
+                if Re_h > 2300
+                    f_h = (1.8*log10(Re_h)-1.5)^-2; %Konakov correlation 
+                    Nu_h = ((f_h/8)*(Re_h-1000)*Pr_h)/(1+12.7*sqrt(f_h/8)*(Pr_h^(2/3)-1)); % Gnielinski
+                else
+                    Nu_1 = 4.364;
+                    Nu_2 = 1.953*(Re_h*Pr_h*info.Dh_h/info.Lt_h)^0.33333333333333333333333333333;
+                    Nu_h = (Nu_1^3 + 0.6^3 + (Nu_2-0.6)^3)^0.3333333333333333333333;
+                end
+                out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
         end
         
     elseif strcmp(out.type_zone_h{j}, 'tp') 
@@ -1164,11 +1379,7 @@ for j = 1:length(out.T_h_vec)-1
                 mu_h_l = CoolProp.PropsSI('V', 'Q', 0, 'P', P_h_su, fluid_h);
                 k_h_l = CoolProp.PropsSI('L', 'Q', 0, 'P', P_h_su, fluid_h);
                 x_h = CoolProp.PropsSI('Q', 'H', (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)), 'P', P_h_su, fluid_h);
-                if x_h > 0.05
-                    Pr_h = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)), 'P', P_h_su, fluid_h);
-                else
-                    Pr_h = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_h_su, fluid_h);
-                end
+                Pr_h_l = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_h_su, fluid_h);
                 rho_h_l = CoolProp.PropsSI('D', 'Q', 0, 'P', P_h_su, fluid_h);
                 rho_h_v = CoolProp.PropsSI('D', 'Q', 1, 'P', P_h_su, fluid_h);
                 G_h = (m_dot_h/info.n_canals_h)/info.CS_h;
@@ -1176,7 +1387,7 @@ for j = 1:length(out.T_h_vec)-1
                 Re_h_eq = G_h_eq*info.Dh_h/mu_h_l;                
                 Ge1 = 11.22*(info.pitch_co/info.Dh_h)^-2.83*(info.theta)^(-4.5);
                 Ge2 = 0.35*(info.pitch_co/info.Dh_h)^0.23*(info.theta)^(1.48);
-                Nu_h = Ge1*Re_h_eq^Ge2*Pr_h^0.33333333;
+                Nu_h = Ge1*Re_h_eq^Ge2*Pr_h_l^0.33333333;
                 out.hConv_h(j) = Nu_h*k_h_l/info.Dh_h;
             
             case 'Longo_condensation'
@@ -1198,7 +1409,38 @@ for j = 1:length(out.T_h_vec)-1
                 else
                     out.hConv_h(j) = 1.875*info.phi*k_h_l/info.Dh_h*Re_h_eq^0.445*Pr_h_l^0.3333333;
                 end
-        
+                
+            case 'Cavallini_condensation'
+                mu_h_l = CoolProp.PropsSI('V', 'Q', 0, 'P', P_h_su, fluid_h);
+                mu_h_v = CoolProp.PropsSI('V', 'Q', 1, 'P', P_h_su, fluid_h);
+                rho_h_l = CoolProp.PropsSI('D', 'Q', 0, 'P', P_h_su, fluid_h);
+                rho_h_v = CoolProp.PropsSI('D', 'Q', 1, 'P', P_h_su, fluid_h);
+                Pr_h_l = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_h_su, fluid_h);
+                x_h = CoolProp.PropsSI('Q', 'H', (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)), 'P', P_h_su, fluid_h);
+                k_h_l = CoolProp.PropsSI('L', 'Q', 0, 'P', P_h_su, fluid_h);                
+                d_i = info.Dh_h;
+                g = 9.81;
+                C_T = 2.6; %1.6 for HC or 2.6 for other refrigerant
+                X_tt = ((mu_h_l/mu_h_v)^0.1)*((rho_h_v/rho_h_l)^0.5)*((1-x_h)/x_h)^0.9; %Martinelli factor
+                             
+                G_h = (m_dot_h/info.n_canals_h)/info.CS_h;
+                Re_h_l = G_h*info.Dh_h/mu_h_l;              
+                J_v = x_h*G_h/sqrt(g*d_i*rho_h_v*(rho_h_l-rho_h_v)); 
+                J_v_T = (((7.5/(4.3*X_tt^1.111 + 1))^-3) + ((C_T)^-3) )^-0.333333333333333333;
+                h_h_lo = 0.023*Re_h_l^0.8*Pr_h_l^0.4*k_h_l/d_i;
+                h_h_a = h_h_lo*(1 + (1.128*x_h^0.817)*((rho_h_l/rho_h_v)^0.3685)*((mu_h_l/mu_h_v)^0.2363)*((1-mu_h_v/mu_h_l)^2.144)*(Pr_h_l^-0.1));                
+                
+                if J_v > J_v_T %delta_T-independent flow regime
+                    out.hConv_h(j) = h_h_a;
+                elseif J_v <= J_v_T %delta_T-dependent flow regime
+                    i_fg_h = CoolProp.PropsSI('H', 'Q', 1, 'P', P_h_su, fluid_h) - CoolProp.PropsSI('H', 'Q', 0, 'P', P_h_su, fluid_h);
+                    T_sat = (0.5*out.T_h_vec(j)+0.5*out.T_h_vec(j+1));
+                    T_wall = (0.25*out.T_h_vec(j)+0.25*out.T_h_vec(j+1) + 0.25*out.T_c_vec(j)+0.25*out.T_c_vec(j+1));
+                    h_strat = 0.725*((1+0.741*((1-x_h)/x_h)^0.3321)^-1)*(((k_h_l^3*rho_h_l*(rho_h_l-rho_h_v)*g*i_fg_h)/(mu_h_l*d_i*(T_sat-T_wall)))^0.25)+((1-x_h^0.087)*h_h_lo);
+                    h_h_d = J_v/J_v_T*(h_h_a*(J_v_T/J_v)^0.8 - h_strat) + h_strat;
+                    out.hConv_h(j) = h_h_d;
+                end
+                                            
         end
         
     end
@@ -1228,8 +1470,13 @@ for j = 1:length(out.T_h_vec)-1
                     f_90 = 9.75/Re_c^0.289;
                 end
                 f_c = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
-                Nu_c = 0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^0.374;
+                Nu_c = info.fact_corr_sp*0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^0.374;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
+                out.Re_c(j) = Re_c;
+                out.Nu_c(j) = Nu_c;
+                out.Pr_c(j) = Pr_c;
+                out.k_c(j) = k_c;
+                
                 
             case 'Wanniarachchi'
                 if strcmp(info.type_c, 'H')
@@ -1246,8 +1493,12 @@ for j = 1:length(out.T_h_vec)-1
                 Re_c = G_c*info.Dh_c/mu_c;
                 j_Nu_c_t = 12.6*(90-info.theta*180/pi)^(-1.142)*Re_c^(0.646+0.00111*(90-info.theta*180/pi));
                 j_Nu_c_l = 3.65*(90-info.theta*180/pi)^(-0.455)*Re_c^-0.339;
-                Nu_c = (j_Nu_c_l^3 + j_Nu_c_t^3)^(1/3)*Pr_c^(1/3);
+                Nu_c = info.fact_corr_sp*(j_Nu_c_l^3 + j_Nu_c_t^3)^(1/3)*Pr_c^(1/3);
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
+                out.Re_c(j) = Re_c;
+                out.Nu_c(j) = Nu_c;
+                out.Pr_c(j) = Pr_c;
+                out.k_c(j) = k_c;
                 
             case 'Thonon'
                 if strcmp(info.type_c, 'H')
@@ -1275,9 +1526,50 @@ for j = 1:length(out.T_h_vec)-1
                     C = 0.2946;
                     m = 0.7;
                 end
-                Nu_c = C*Re_c^m*Pr_c^0.33333333;
+                Nu_c = info.fact_corr_sp*C*Re_c^m*Pr_c^0.33333333;
+                out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
+                out.Re_c(j) = Re_c;
+                out.Nu_c(j) = Nu_c;
+                out.Pr_c(j) = Pr_c;
+                out.k_c(j) = k_c;                
+            case 'Gnielinski'
+                if strcmp(info.type_c, 'H')
+                    mu_c = CoolProp.PropsSI('V', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    Pr_c = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    k_c = CoolProp.PropsSI('L', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                elseif strcmp(info.type_c, 'T')
+                    cp_c = sf_PropsSI_bar('C', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    k_c = sf_PropsSI_bar('L', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    mu_c = sf_PropsSI_bar('V', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    Pr_c = cp_c*mu_c/k_c;
+                end
+                G_c = m_dot_c/info.n_canals_c/info.CS_c;
+                Re_c = G_c*info.Dh_c/mu_c;
+                if Re > 2300
+                    f_c = (1.8*log10(Re_c)-1.5)^-2; %Konakov correlation
+                    Nu_c = ((f_c/8)*(Re_c-1000)*Pr_c)/(1+12.7*sqrt(f_c/8)*(Pr_c^(2/3)-1));
+                else
+                    Nu_c = 3.66;
+                end
+                out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
+                
+            case 'VDI_finned_tubes_staggered'
+                if strcmp(info.type_c, 'H')
+                    mu_c = CoolProp.PropsSI('V', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    Pr_c = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    k_c = CoolProp.PropsSI('L', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                elseif strcmp(info.type_c, 'T')
+                    cp_c = sf_PropsSI_bar('C', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    k_c = sf_PropsSI_bar('L', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    mu_c = sf_PropsSI_bar('V', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    Pr_c = cp_c*mu_c/k_c;
+                end
+                G_c = m_dot_c/info.n_canals_c/info.CS_c; % Warning, CS_c is the minimum free flow surface area and n_canals_c is taken equal to 1               
+                Re_c = G_c*info.Dh_c/mu_c; % Warning, Dh_c is the externel diameter of the tubes forming the bank
+                Nu_c = 0.38*Re_c^0.6*Pr_c^0.33333333*info.fin_c.omega_t^-0.15;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
         end
+        
         
     elseif strcmp(out.type_zone_c{j}, 'tp')
         switch info.correlation_c.type_2phase
@@ -1285,11 +1577,7 @@ for j = 1:length(out.T_h_vec)-1
                 mu_c_l = CoolProp.PropsSI('V', 'Q', 0, 'P', P_c_su, fluid_c);
                 k_c_l = CoolProp.PropsSI('L', 'Q', 0, 'P', P_c_su, fluid_c);
                 x_c = CoolProp.PropsSI('Q', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
-                if x_c > 0.1
-                    Pr_c = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
-                else
-                    Pr_c = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_c_su, fluid_c);
-                end
+                Pr_c_l = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_c_su, fluid_c);
                 rho_c_l = CoolProp.PropsSI('D', 'Q', 0, 'P', P_c_su, fluid_c);
                 rho_c_v = CoolProp.PropsSI('D', 'Q', 1, 'P', P_c_su, fluid_c);
                 i_fg_c = CoolProp.PropsSI('H', 'Q', 1, 'P', P_c_su, fluid_c) - CoolProp.PropsSI('H', 'Q', 0, 'P', P_c_su, fluid_c);
@@ -1300,15 +1588,21 @@ for j = 1:length(out.T_h_vec)-1
                 Ge1 = 2.81*(info.pitch_co/info.Dh_c)^-0.041*(info.theta)^(-2.83);
                 Ge2 = 0.746*(info.pitch_co/info.Dh_c)^-0.082*(info.theta)^(0.61);
                 Bo = 1;
-                for l=1:10 %iterate for boiling number
-                    Nu = Ge1*Re_c_eq^Ge2*Bo^0.3*Pr_c^0.4;
+                k = 0;
+                err_Bo = 1;
+                while k <= 10 && err_Bo > 5e-2 %iterate for boiling number
+                    Nu = Ge1*Re_c_eq^Ge2*Bo^0.3*Pr_c_l^0.4;
                     h = Nu*k_c_l/info.Dh_c;
                     U = (1/h +  1/out.hConv_h(j))^-1;
                     A_tp = AU_tp/U;
                     q = out.Qdot_vec(j)/A_tp;
-                    Bo = q/(G_c_eq*i_fg_c);
+                    Bo_new = q/(G_c_eq*i_fg_c);
+                    err_Bo = abs(Bo_new-Bo)/Bo;
+                    Bo = Bo_new;
                 end
+                
                 out.hConv_c(j) = h;
+                
                 
             case 'Almalfi_boiling'
                 g = 9.81;
@@ -1329,13 +1623,18 @@ for j = 1:length(out.T_h_vec)-1
                 if Bd < 4
                     We = (G_c^2*info.Dh_c)/(rho_c*sigma_c);
                     Bo = 1;
-                    for l=1:10 %iterate for boiling number
-                        Nu_c = 982*beta_star^1.101*We^0.315*Bo^0.32*rho_star^-0.224;
+                    k = 0;
+                    err_Bo = 1;
+                    while k <= 10 && err_Bo > 5e-2 %iterate for boiling number
+                        k = k+1;
+                        Nu_c = info.fact_corr_2p*982*beta_star^1.101*We^0.315*Bo^0.32*rho_star^-0.224;
                         h = Nu_c*k_c_l/info.Dh_c;
                         U = (1/h +  1/out.hConv_h(j))^-1;
                         A_tp = AU_tp/U;
                         q = out.Qdot_vec(j)/A_tp;
-                        Bo = q/(G_c_eq*i_fg_c);
+                        Bo_new = q/(G_c_eq*i_fg_c);
+                        err_Bo = abs(Bo_new-Bo)/Bo;
+                        Bo = Bo_new;
                     end
                     out.hConv_c(j) = h;
                 else
@@ -1344,13 +1643,18 @@ for j = 1:length(out.T_h_vec)-1
                     Re_c_v = G_c*x_c*info.Dh_c/mu_c_v;
                     Re_c_lo = G_c*info.Dh_c/mu_c_l;
                     Bo = 1;
-                    for l=1:10 %iterate for boiling number
-                        Nu_c = 18.495*beta_star^0.248*Re_c_v^0.135*Re_c_lo^0.351*Bd^0.235*Bo^0.198*rho_star^-0.223;
+                    k = 0;
+                    err_Bo = 1;
+                    while k <= 10 && err_Bo > 5e-2 %iterate for boiling number
+                        k = k+1;       
+                        Nu_c = info.fact_corr_2p*18.495*beta_star^0.248*Re_c_v^0.135*Re_c_lo^0.351*Bd^0.235*Bo^0.198*rho_star^-0.223;
                         h = Nu_c*k_c_l/info.Dh_c;
                         U = (1/h +  1/out.hConv_h(j))^-1;
                         A_tp = AU_tp/U;
                         q = out.Qdot_vec(j)/A_tp;
-                        Bo = q/(G_c_eq*i_fg_c);
+                        Bo_new = q/(G_c_eq*i_fg_c);
+                        err_Bo = abs(Bo_new-Bo)/Bo;
+                        Bo = Bo_new;
                     end
                     out.hConv_c(j) = h;
                 end
@@ -1412,14 +1716,40 @@ phi = (R_e/r - 1)*(1+0.35*log(R_e/r));
 eta_fin = tanh(m*R_e*phi)/(m*R_e*phi);
 end
 
+function one_alpha = VoidFraction_Hughmark(q, rho_v, rho_l, mu_v, mu_l, D, G)
+one_alpha = NaN*ones(size(q));
+for i = 1:length(q)
+    q1 = q(i);
+    beta = 1./(1+(((1-q1)./q1).*(rho_v/rho_l)));
+    alpha = beta;
+    res_alpha = 1;
+    k = 0;
+    while res_alpha > 1e-2 && k <= 10
+        k = k + 1;
+        Z = (((D*G)./(mu_l+alpha.*(mu_v-mu_l))).^(1/6)).*(((1/9.81/D)*(G.*q1./(rho_v.*beta.*(1-beta))).^2).^(1/8));
+        ln_Z = log(Z);
+        p1 = -0.010060658854755;
+        p2 = 0.155594796014726;
+        p3 = -0.870912508715887;
+        p4 = 2.167004115373165;
+        p5 = -2.224608445535130;
+        ln_Kh = p1.*ln_Z.^4 + p2.*ln_Z.^3 + p3.*ln_Z.^2 + p4.*ln_Z + p5;
+        Kh = exp(ln_Kh);
+        alpha_new = Kh.*beta;
+        res_alpha= norm(abs(alpha-alpha_new)./alpha_new);
+        alpha = alpha_new;
+    end
+    one_alpha(i) = 1-alpha;
+end
+end
 
-function one_alpha= VoidFractionSivi(q, rho_v, rho_l)
-S_zivi = (rho_v/rho_l)^(-1/3); 
-alpha = 1./(1+((1-q)./q).*(rho_v/rho_l)*S_zivi);
+function one_alpha = VoidFraction_Sivi(q, rho_v, rho_l)
+S_zivi = (rho_v/rho_l)^(-1/3);
+alpha = 1./(1+(((1-q)./q).*(rho_v/rho_l)*S_zivi));
 one_alpha = 1-alpha;
 end
 
-function one_alpha= VoidFractionRD(q, rho_v, rho_l, S)
-alpha = 1./(1+((1-q)./q).*(rho_v/rho_l)*S);
+function one_alpha = VoidFraction_homogenous(q, rho_v, rho_l)
+alpha = 1./(1+((1-q)./q).*(rho_v/rho_l));
 one_alpha = 1-alpha;
 end

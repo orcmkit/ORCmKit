@@ -37,7 +37,7 @@ elseif strcmp(param.solverType, 'DTsc_imposed')
     end
     out.DT_sc = param.DT_sc;
 end
-[out_PP, TS_PP] = PumpModel(out.P_pp_su, out.h_pp_su, x(1), fluid_wf, N_pp, param.PP);
+[out_PP, TS_PP] = PumpModel3(out.P_pp_su, out.h_pp_su, x(1), fluid_wf, N_pp, T_amb, param.PP);
 out.M_pp = out_PP.M;
 out.m_dot_wf = out_PP.m_dot;
 out.W_dot_pp = out_PP.W_dot;

@@ -1,4 +1,5 @@
-function [out,TS] = ExpanderModel(fluid, P_su, h_su, N_exp, P_ex, T_amb, param)
+function [out,TS] = ExpanderModel5(fluid, P_su, h_su, N_exp, P_ex, T_amb, param)
+% fluid, P_su, h_su, N_exp, P_ex, T_amb, param
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 
@@ -110,6 +111,9 @@ if nargin == 0
             param.P_su_n = 1.417898896236315e+06;
             param.AU_ex_n = 94.017028808593750;
             param.AU_amb = 0.674005126953125;
+            load('C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power\OffDesign\gamma_R245fa.mat');
+            param.gamma.gamma_PQ_pol = gamma_PQ_R245fa; param.gamma.gamma_PT_pol = gamma_PT_R245fa;
+
     end
 end
 
@@ -229,23 +233,22 @@ if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
 %                 k = k + 1;
 %             end
             
-            ff_guess = [0.8 1.2 0.7 1.3 0.4 1.7 3 ]; %guesses on the filling factor to provide suitable initial point for the iteration
-            x_T_guess = [0.9  0.7 0.95 0.8 0.99];
+            ff_guess = [0.7 1.2 0.8 1.3 0.4 1.7 3 ]; %guesses on the filling factor to provide suitable initial point for the iteration
+            x_T_guess = [0.7 0.95 0.8 0.99 0.9  ];
             stop = 0;
             
             j = 1;
             while not(stop) && j <= length(x_T_guess)
                 k =1;
                 while not(stop) && k <= length(ff_guess)
-
+                        
                     % Loop to permit multiple attempts to solve the implicit
                     % calculation of Exp_SemiEmp trough Exp_SemiEmp_res
                     x0(1) = ff_guess(k)*param.V_s*N_exp/60*CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid); %initial value for M_dot
                     x0(2) = x_T_guess(j)*T_su+(1-x_T_guess(j))*T_amb; %initial value for T_wall
-                    x0(3) = 0.8; %initial value for gamma
                     ub = 2*x0; % upper bound for fsolve
                     options = optimset('Display','none');% 'TolX', 1e-8, 'TolFun', 1e-4);
-                    [x, res, flag] = fsolve(@(x)  Exp_SemiEmp_res(x, ub, fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max), x0./ub, options);
+                    [x, res, flag] = fsolve(@(x)  Exp_SemiEmp_res(x, ub, fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max, param), x0./ub, options);
                     if norm(res) < 1e-4 %flag > 0 
                         stop = 1;
                     end
@@ -255,7 +258,7 @@ if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
             end
             
             x = x.*ub;
-            int = Exp_SemiEmp(x(1), x(2), x(3), fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max);
+            int = Exp_SemiEmp(x(1), x(2), fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max, param);
             M_dot = x(1);
             W_dot = int.W_dot;
             h_ex = int.h_ex;
@@ -340,18 +343,17 @@ end
 end
 
 %% NESTED FUNCTIONS
-function res = Exp_SemiEmp_res(x, ub, fluid, P_su, h_su, N_exp, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, h_min, h_max)
+function res = Exp_SemiEmp_res(x, ub, fluid, P_su, h_su, N_exp, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, h_min, h_max, param)
 x = x.*ub;
-out = Exp_SemiEmp(x(1), x(2), x(3), fluid, P_su, h_su, N_exp, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, h_min, h_max);
-res = [out.resE ; out.resMlk; out.resgamma];
+out = Exp_SemiEmp(x(1), x(2), fluid, P_su, h_su, N_exp, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, h_min, h_max, param);
+res = [out.resE ; out.resMlk];
 end
 
-function out = Exp_SemiEmp(M_dot, T_w, gamma, fluid, P_su, h_su, N_exp, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, h_min, h_max)
+function out = Exp_SemiEmp(M_dot, T_w, fluid, P_su, h_su, N_exp, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, h_min, h_max, param)
 if isnan(T_w)
     T_w =  CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
 end
 M_dot = max(1e-5, M_dot);
-gamma = max(1e-2,gamma);
 
 s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
 rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
@@ -368,7 +370,7 @@ else
 end
 out.epsilon_su1 = max(0,(1-exp(-AU_su1/(M_dot*out.cp_su1))));
 out.DP_su = P_su-out.P_su1;
-out.Q_dot_su = max(-inf,out.epsilon_su1*M_dot*out.cp_su1*(out.T_su1 - T_w));
+out.Q_dot_su = max(0,out.epsilon_su1*M_dot*out.cp_su1*(out.T_su1 - T_w));
 out.h_su2 = min(h_max,max(max(out.h_ex_s, CoolProp.PropsSI('H','Q',0.1,'P',out.P_su1,fluid)),out.h_su1 - out.Q_dot_su/M_dot));
 out.s_su2 = CoolProp.PropsSI('S','H',out.h_su2,'P',out.P_su1,fluid);
 out.rho_su2 = CoolProp.PropsSI('D','H',out.h_su2,'P',out.P_su1,fluid);
@@ -391,18 +393,34 @@ out.W_dot = out.W_dot_in - out.W_dot_loss;
 out.W_dot_s = M_dot*(h_su - out.h_ex_s);
 out.epsilon_is = out.W_dot/out.W_dot_s;
 out.M_dot_leak = M_dot - out.M_dot_in;
-out.gamma = max(0.1,min(gamma,3));
-out.P_thr = max(P_ex,out.P_su1*(2/(out.gamma+1))^(out.gamma/(out.gamma-1)));
+
+out.Q_su2 = CoolProp.PropsSI('Q','P',out.P_su1,'H',out.h_su2,fluid);
+if  out.Q_su2 < 0
+    out.gamma  = feval(param.gamma.gamma_PT_pol,[out.P_su1/1e5, CoolProp.PropsSI('T','P',out.P_su1,'H',out.h_su2,fluid)/1e2]);
+else
+    out.gamma = feval(param.gamma.gamma_PQ_pol,[out.P_su1/1e5, out.Q_su2]);
+end
+out.gamma = max(1e-2,out.gamma);
+P_crit = out.P_su1*(2/(out.gamma+1))^(out.gamma/(out.gamma-1));
+out.resgamma = 0;
+out.P_thr = max(P_ex,P_crit);
 out.rho_thr = CoolProp.PropsSI('D','P',out.P_thr,'S',out.s_su2,fluid);
-out.gamma_bis =  log10(out.P_su1/out.P_thr)/log10(out.rho_su2/out.rho_thr);
-out.resgamma = (out.gamma_bis-out.gamma)/out.gamma;
 out.C_thr = sqrt(2*(out.h_su2 - CoolProp.PropsSI('H','P',out.P_thr,'S',out.s_su2,fluid)));
 out.M_dot_leak_bis = A_leak0*out.C_thr*out.rho_thr;
+
+% out.gamma = max(0.1,min(gamma,3));
+% out.P_thr = max(P_ex,out.P_su1*(2/(out.gamma+1))^(out.gamma/(out.gamma-1)));
+% out.rho_thr = CoolProp.PropsSI('D','P',out.P_thr,'S',out.s_su2,fluid);
+% out.gamma_bis =  log10(out.P_su1/out.P_thr)/log10(out.rho_su2/out.rho_thr);
+% out.resgamma = (out.gamma_bis-out.gamma)/out.gamma;
+% out.C_thr = sqrt(2*(out.h_su2 - CoolProp.PropsSI('H','P',out.P_thr,'S',out.s_su2,fluid)));
+% out.M_dot_leak_bis = A_leak0*out.C_thr*out.rho_thr;
+
 out.h_ex1 = max(min((out.M_dot_in*out.h_ex2 + out.M_dot_leak*out.h_su2)/M_dot, out.h_su2), out.h_ex2);
 out.T_ex1 = CoolProp.PropsSI('T','P',P_ex,'H',out.h_ex1,fluid);
 out.cp_ex1 = CoolProp.PropsSI('C','P',P_ex,'H',out.h_ex1,fluid);
 out.epsilon_ex1 = max(0,(1-exp(-AU_ex1/(M_dot*out.cp_ex1))));
-out.Q_dot_ex = max(-inf,out.epsilon_ex1*M_dot*out.cp_ex1*(T_w-out.T_ex1));
+out.Q_dot_ex = max(0,out.epsilon_ex1*M_dot*out.cp_ex1*(T_w-out.T_ex1));
 out.h_ex = min(out.h_ex1 + out.Q_dot_ex/M_dot,h_max);
 out.Q_dot_amb = AU_amb*(T_w-T_amb);
 out.resE = abs((out.Q_dot_su + out.W_dot_loss - out.Q_dot_ex - out.Q_dot_amb)/(out.Q_dot_su + out.W_dot_loss));
