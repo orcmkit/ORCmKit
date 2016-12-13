@@ -778,12 +778,18 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                 param.A_h_tot = param.A_tot;
                 param.A_c_tot = param.A_tot;
             end
-            if not(isfield(param, 'fact_corr_sp'))                
-                param.fact_corr_sp = 1;
+            if not(isfield(param, 'fact_corr_sp_h'))                
+                param.fact_corr_sp_h = 1;
             end
-            if not(isfield(param, 'fact_corr_2p'))                
-                param.fact_corr_2p = 1;
+            if not(isfield(param, 'fact_corr_2p_h'))                
+                param.fact_corr_2p_h = 1;
             end            
+            if not(isfield(param, 'fact_corr_sp_c'))                
+                param.fact_corr_sp_c = 1;
+            end
+            if not(isfield(param, 'fact_corr_2p_c'))                
+                param.fact_corr_2p_c = 1;
+            end      
             
             % Power and enthalpy vectors calculation
             Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param); %Compute the maximum heat power that can be transferred between the two media
@@ -1297,7 +1303,7 @@ for j = 1:length(out.T_h_vec)-1
                     f_90 = 9.75/Re_h^0.289;
                 end               
                 f_h = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
-                Nu_h = info.fact_corr_sp*0.205*(Pr_h^0.33333333)*(f_h*Re_h^2*sin(2*info.theta))^0.374;
+                Nu_h = info.fact_corr_sp_h*0.205*(Pr_h^0.33333333)*(f_h*Re_h^2*sin(2*info.theta))^0.374;
                 out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
                 
             case 'Wanniarachchi'
@@ -1315,7 +1321,7 @@ for j = 1:length(out.T_h_vec)-1
                 Re_h = G_h*info.Dh_h/mu_h;
                 j_Nu_h_t = 12.6*(90-info.theta*180/pi)^(-1.142)*Re_h^(0.646+0.00111*(90-info.theta*180/pi));                
                 j_Nu_h_l = 3.65*(90-info.theta*180/pi)^(-0.455)*Re_h^-0.339;
-                Nu_h = info.fact_corr_sp*(j_Nu_h_l^3 + j_Nu_h_t^3)^(1/3)*Pr_h^(1/3);
+                Nu_h = info.fact_corr_sp_h*(j_Nu_h_l^3 + j_Nu_h_t^3)^(1/3)*Pr_h^(1/3);
                 out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
                 
             case 'Thonon'
@@ -1344,7 +1350,7 @@ for j = 1:length(out.T_h_vec)-1
                     C = 0.2946;
                     m = 0.7;
                 end
-                Nu_h = info.fact_corr_sp*C*Re_h^m*Pr_h^0.33333333;
+                Nu_h = info.fact_corr_sp_h*C*Re_h^m*Pr_h^0.33333333;
                 out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
                 
             case 'Gnielinski_and_Sha'
@@ -1361,10 +1367,10 @@ for j = 1:length(out.T_h_vec)-1
                 G_h = m_dot_h/info.n_canals_h/info.CS_h;
                 
                 Re_h = G_h*info.Dh_h/mu_h;
-                if Re_h > 2300
+                if Re_h > 2300 %source: VDI section G1 - 4.1, page 696 
                     f_h = (1.8*log10(Re_h)-1.5)^-2; %Konakov correlation 
                     Nu_h = ((f_h/8)*(Re_h-1000)*Pr_h)/(1+12.7*sqrt(f_h/8)*(Pr_h^(2/3)-1)); % Gnielinski
-                else
+                else %source: VDI section G1 - 3.2.1, page 695 
                     Nu_1 = 4.364;
                     Nu_2 = 1.953*(Re_h*Pr_h*info.Dh_h/info.Lt_h)^0.33333333333333333333333333333;
                     Nu_h = (Nu_1^3 + 0.6^3 + (Nu_2-0.6)^3)^0.3333333333333333333333;
@@ -1387,7 +1393,7 @@ for j = 1:length(out.T_h_vec)-1
                 Re_h_eq = G_h_eq*info.Dh_h/mu_h_l;                
                 Ge1 = 11.22*(info.pitch_co/info.Dh_h)^-2.83*(info.theta)^(-4.5);
                 Ge2 = 0.35*(info.pitch_co/info.Dh_h)^0.23*(info.theta)^(1.48);
-                Nu_h = Ge1*Re_h_eq^Ge2*Pr_h_l^0.33333333;
+                Nu_h = info.fact_corr_2p_h*Ge1*Re_h_eq^Ge2*Pr_h_l^0.33333333;
                 out.hConv_h(j) = Nu_h*k_h_l/info.Dh_h;
             
             case 'Longo_condensation'
@@ -1405,9 +1411,9 @@ for j = 1:length(out.T_h_vec)-1
                 if Re_h_eq < 1600
                     T_sat = (0.5*out.T_h_vec(j)+0.5*out.T_h_vec(j+1));
                     T_wall = (0.25*out.T_h_vec(j)+0.25*out.T_h_vec(j+1) + 0.25*out.T_c_vec(j)+0.25*out.T_c_vec(j+1));
-                    out.hConv_h(j) = info.phi*0.943*((k_h_l^3*rho_h_l^2*g*i_fg_h)/(mu_h_l*(T_sat-T_wall)*info.L_hex))^0.25;
+                    out.hConv_h(j) = info.fact_corr_2p_h*info.phi*0.943*((k_h_l^3*rho_h_l^2*g*i_fg_h)/(mu_h_l*(T_sat-T_wall)*info.L_hex))^0.25;
                 else
-                    out.hConv_h(j) = 1.875*info.phi*k_h_l/info.Dh_h*Re_h_eq^0.445*Pr_h_l^0.3333333;
+                    out.hConv_h(j) = info.fact_corr_2p_h*1.875*info.phi*k_h_l/info.Dh_h*Re_h_eq^0.445*Pr_h_l^0.3333333;
                 end
                 
             case 'Cavallini_condensation'
@@ -1440,6 +1446,17 @@ for j = 1:length(out.T_h_vec)-1
                     h_h_d = J_v/J_v_T*(h_h_a*(J_v_T/J_v)^0.8 - h_strat) + h_strat;
                     out.hConv_h(j) = h_h_d;
                 end
+                
+            case 'Shah_condensation'
+                mu_h_l = CoolProp.PropsSI('V', 'Q', 0, 'P', P_h_su, fluid_h);
+                p_h_star = P_c_su/CoolProp.PropsSI('Pcrit', 'Q', 1, 'P', P_c_su, fluid_c);              
+                x_h = CoolProp.PropsSI('Q', 'H', (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)), 'P', P_h_su, fluid_h);
+                k_h_l = CoolProp.PropsSI('L', 'Q', 0, 'P', P_h_su, fluid_h);                
+                G_h = (m_dot_h/info.n_canals_h)/info.CS_h;
+                Re_h_l = G_h*info.Dh_h/mu_h_l;  
+                Pr_h_l = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_h_su, fluid_h);
+                out.hConv_h(j) = 0.023*(k_h_l/info.Dh_h)*(Re_h_l^0.8)*(Pr_h_l^0.4)*(((1-x_h)^0.8)+ ((3.8*(x_h^0.76)*(1-x_h)^0.04)/(p_h_star^0.38)));
+                
                                             
         end
         
@@ -1470,7 +1487,7 @@ for j = 1:length(out.T_h_vec)-1
                     f_90 = 9.75/Re_c^0.289;
                 end
                 f_c = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
-                Nu_c = info.fact_corr_sp*0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^0.374;
+                Nu_c = info.fact_corr_sp_c*0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^0.374;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
                 out.Re_c(j) = Re_c;
                 out.Nu_c(j) = Nu_c;
@@ -1493,7 +1510,7 @@ for j = 1:length(out.T_h_vec)-1
                 Re_c = G_c*info.Dh_c/mu_c;
                 j_Nu_c_t = 12.6*(90-info.theta*180/pi)^(-1.142)*Re_c^(0.646+0.00111*(90-info.theta*180/pi));
                 j_Nu_c_l = 3.65*(90-info.theta*180/pi)^(-0.455)*Re_c^-0.339;
-                Nu_c = info.fact_corr_sp*(j_Nu_c_l^3 + j_Nu_c_t^3)^(1/3)*Pr_c^(1/3);
+                Nu_c = info.fact_corr_sp_c*(j_Nu_c_l^3 + j_Nu_c_t^3)^(1/3)*Pr_c^(1/3);
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
                 out.Re_c(j) = Re_c;
                 out.Nu_c(j) = Nu_c;
@@ -1526,12 +1543,13 @@ for j = 1:length(out.T_h_vec)-1
                     C = 0.2946;
                     m = 0.7;
                 end
-                Nu_c = info.fact_corr_sp*C*Re_c^m*Pr_c^0.33333333;
+                Nu_c = info.fact_corr_sp_c*C*Re_c^m*Pr_c^0.33333333;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
                 out.Re_c(j) = Re_c;
                 out.Nu_c(j) = Nu_c;
                 out.Pr_c(j) = Pr_c;
-                out.k_c(j) = k_c;                
+                out.k_c(j) = k_c;     
+                
             case 'Gnielinski'
                 if strcmp(info.type_c, 'H')
                     mu_c = CoolProp.PropsSI('V', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
@@ -1553,7 +1571,7 @@ for j = 1:length(out.T_h_vec)-1
                 end
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
                 
-            case 'VDI_finned_tubes_staggered'
+            case 'VDI_finned_tubes_staggered' %source: VDI Heat Atlas, section M1 - 2.6, page 1275
                 if strcmp(info.type_c, 'H')
                     mu_c = CoolProp.PropsSI('V', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
                     Pr_c = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
@@ -1568,6 +1586,35 @@ for j = 1:length(out.T_h_vec)-1
                 Re_c = G_c*info.Dh_c/mu_c; % Warning, Dh_c is the externel diameter of the tubes forming the bank
                 Nu_c = 0.38*Re_c^0.6*Pr_c^0.33333333*info.fin_c.omega_t^-0.15;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
+                
+            case 'Wang_finned_tubes_staggered'
+                
+                if strcmp(info.type_c, 'H')
+                    mu_c = CoolProp.PropsSI('V', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    Pr_c = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    k_c = CoolProp.PropsSI('L', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                elseif strcmp(info.type_c, 'T')
+                    cp_c = sf_PropsSI_bar('C', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    k_c = sf_PropsSI_bar('L', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    mu_c = sf_PropsSI_bar('V', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    Pr_c = cp_c*mu_c/k_c;
+                end
+                N = info.n_row_tubes;
+                F_p = info.fin_pitch;
+                D_c = info.Dh_c; %Dh_c is the externel diameter of the tubes forming the bank (tube diameter +2*fin thickness)
+                P_l = info.tube_longitudital_pitch;
+                D_h = info.Dh_c_bis; %Dh_c_bis is the actual hydraulic diameter = 4*(A_c/A_o)*L with L : longitudinal depth of the heat exchanger / Ac = minimal flow area/ Ao = total surface area
+                G_c = m_dot_c/info.n_canals_c/info.CS_c; % Warning, CS_c is the minimum free flow surface area and n_canals_c is taken equal to 1
+                Re_c_Dc = G_c*D_c/mu_c;                
+                p1 = -0.361-0.042*N/log(Re_c_Dc)+0.158*log(N*(F_p/D_c)^0.41);
+                p2 = -1.224-((0.076*(P_l/D_h)^1.42)/(log(Re_c_Dc)));
+                p3 = -0.083+0.058*N/log(Re_c_Dc);
+                p4 = -5.735 +1.21*log(Re_c_Dc/N);
+                p5 = -0.93;
+                j_c = 0.086*(Re_c_Dc^p1)*(N^p2)*((F_p/D_c)^p3)*((F_p/D_h)^p4)*((F_p/P_l)^p5);
+                Nu_c = j_c*Re_c_Dc*Pr_c^0.33333333333333333333;
+                out.hConv_c(j) = Nu_c*k_c/D_c;
+                
         end
         
         
@@ -1591,7 +1638,7 @@ for j = 1:length(out.T_h_vec)-1
                 k = 0;
                 err_Bo = 1;
                 while k <= 10 && err_Bo > 5e-2 %iterate for boiling number
-                    Nu = Ge1*Re_c_eq^Ge2*Bo^0.3*Pr_c_l^0.4;
+                    Nu = info.fact_corr_2p_c*Ge1*Re_c_eq^Ge2*Bo^0.3*Pr_c_l^0.4;
                     h = Nu*k_c_l/info.Dh_c;
                     U = (1/h +  1/out.hConv_h(j))^-1;
                     A_tp = AU_tp/U;
@@ -1627,7 +1674,7 @@ for j = 1:length(out.T_h_vec)-1
                     err_Bo = 1;
                     while k <= 10 && err_Bo > 5e-2 %iterate for boiling number
                         k = k+1;
-                        Nu_c = info.fact_corr_2p*982*beta_star^1.101*We^0.315*Bo^0.32*rho_star^-0.224;
+                        Nu_c = info.fact_corr_2p_c*982*beta_star^1.101*We^0.315*Bo^0.32*rho_star^-0.224;%
                         h = Nu_c*k_c_l/info.Dh_c;
                         U = (1/h +  1/out.hConv_h(j))^-1;
                         A_tp = AU_tp/U;
@@ -1647,7 +1694,7 @@ for j = 1:length(out.T_h_vec)-1
                     err_Bo = 1;
                     while k <= 10 && err_Bo > 5e-2 %iterate for boiling number
                         k = k+1;       
-                        Nu_c = info.fact_corr_2p*18.495*beta_star^0.248*Re_c_v^0.135*Re_c_lo^0.351*Bd^0.235*Bo^0.198*rho_star^-0.223;
+                        Nu_c = info.fact_corr_2p_c*18.495*beta_star^0.248*Re_c_v^0.135*Re_c_lo^0.351*Bd^0.235*Bo^0.198*rho_star^-0.223;
                         h = Nu_c*k_c_l/info.Dh_c;
                         U = (1/h +  1/out.hConv_h(j))^-1;
                         A_tp = AU_tp/U;
@@ -1659,6 +1706,24 @@ for j = 1:length(out.T_h_vec)-1
                     out.hConv_c(j) = h;
                 end
                 
+            case 'Cooper_boiling'
+                p_star = P_c_su/CoolProp.PropsSI('Pcrit', 'Q', 1, 'P', P_c_su, fluid_c);
+                M = 1e3*CoolProp.PropsSI('M', 'Q', 1, 'P', P_c_su, fluid_c);
+                Rp = 0.4; % roughness in µm
+                AU_tp = out.Qdot_vec(j)/out.DTlog(j);
+                q = out.Qdot_vec(j)/info.A_c_tot;
+                err_q = 1;
+                k = 0;
+                while k <= 10 && err_q > 5e-2 %iterate for boiling number
+                    k = k+1;
+                    h = 55*(p_star^(0.12-0.2*log10(Rp)))*((-log10(p_star))^(-0.55))*(q^0.67)*(M^(-0.5));
+                    U = (1/h +  1/out.hConv_h(j))^-1;
+                    A_tp = AU_tp/U;
+                    q_new = out.Qdot_vec(j)/A_tp;
+                    err_q = abs(q_new-q)/q;
+                    q = q_new;
+                end
+                out.hConv_c(j) = h;
         end  
         
     end
