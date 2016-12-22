@@ -135,26 +135,100 @@ function [out,TS] = HexModel(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su,
 if nargin == 0    
     % Define a demonstration case if HexModel.mat is not executed externally  
     
-    fluid_h = 'PiroblocBasic';                                               % Nature of the hot fluid           [-]
-    m_dot_h = 0.05;                                                          % Mass flow rat of the hot fluid    [kg/s]
-    P_h_su =  2e5;                                                          % Supply pressure of the hot fluid  [Pa]
-    in_h_su = 370.5;% CoolProp.PropsSI('H','P',P_h_su,'T',70+273.15, fluid_h);      % Supply h or T of the hot fluid  	[J/kg pr K]
+    fluid_h = 'R245fa';                                               % Nature of the hot fluid           [-]
+    m_dot_h = 0.1;                                                          % Mass flow rat of the hot fluid    [kg/s]
+    P_h_su =  10e+05;                                                          % Supply pressure of the hot fluid  [Pa]
+    in_h_su =  CoolProp.PropsSI('H','P',P_h_su,'T',80+273.15, fluid_h);      % Supply h or T of the hot fluid  	[J/kg pr K]
     fluid_c = 'R245fa';                                                     % Nature of the cold fluid        	[-]
-    m_dot_c = 0.0349;                                                      % Mass flow rat of the cold fluid  	[kg/s]
-    P_c_su = 8.67e5;                                                           % Supply pressure of the cold fluid	[Pa]
-    in_c_su = 2.5073e+05; %CoolProp.PropsSI('H','P',P_c_su,'T',20+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
+    m_dot_c = 0.05;                                                      % Mass flow rat of the cold fluid  	[kg/s]
+    P_c_su = 2e5;                                                           % Supply pressure of the cold fluid	[Pa]
+    in_c_su = CoolProp.PropsSI('H','P',P_c_su,'T',20+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
     
     % Example of impletenation in the case of a correlation-based model for a plate heat exchanger
-%     param.n_tp_disc = 10;
-%     param.modelType = 'hConvCor';
-%     param.correlation_h.type_1phase = 'Martin';
-%     param.correlation_h.type_2phase = 'Han_condensation';
-%     param.correlation_h.void_fraction = 'Homogenous';
-% 
-%     param.correlation_c.type_1phase = 'Martin';
-%     param.correlation_c.type_2phase = 'Han_boiling';
-%     param.type_h = 'T';   
-%     param.type_c = 'H';   
+    
+    
+%     Rt_in =  8.5/2/1000;    % internal radius of the tube [m] 8.5
+%             Rt_ex = 9.5/2/1000;     % external radius of the tube [m] 9.5
+%             Lt = 1120/1000;         % length of the tube [m]
+%             N_pass = 12;            % Number of pass for each pipe [-]
+%             N_pipes = 13;           % Number of pipes [-]
+%             N_row = 4;           % Number of pipes [-]
+%             pitch_fin = 3.5/1000;   % space between the fins [m]
+%             N_fin = floor(Lt/pitch_fin);% Number of fins [-]
+%             W_fin = 980/1000;       % Width of the fins [m]
+%             L_fin = 130/1000;       % Heigh of the fins [m]
+%             th_fin = 0.5/1000;      % Thickness of the fins [m]
+%             X_f_l = 26.5/1000;      % Longitudinal distance between the tubes [m]
+%             X_f_t = 26.3/1000;      % Transversal distance between the tubes [m]
+%             X_f_d = sqrt((0.5*X_f_t)^2+X_f_l^2); % Diagonal distance between the tubes [m]
+%             N_row_1line = N_pass*N_pipes/N_row;          % Number of tubes in one raw
+%             CS_wf = pi*Rt_in^2;
+%             Dh_wf = 2*Rt_in;
+%             A_wf = 2*pi*Rt_in*Lt*N_pipes*N_pass;
+%             CS_sf = min((X_f_t - 2*Rt_ex), 2*(X_f_d - 2*Rt_ex))*N_row_1line*Lt -(W_fin*th_fin*N_fin) ;
+%             Dh_sf = 2*Rt_ex+2*th_fin;
+%             A_fin = 2*N_fin*W_fin*L_fin;
+%             A_sf = A_fin+2*pi*Rt_ex*(Lt-N_fin*th_fin)*N_pipes*N_pass;
+%             B_fin = X_f_t/2;
+%             H_fin = 0.5*sqrt((0.5*X_f_t)^2 + X_f_l^2);
+%             omega_A = A_sf/A_wf;
+%             omega_f = A_fin/A_sf;
+%             omega_t = A_sf/(2*pi*Rt_ex*Lt*N_pipes*N_pass);
+%             Dh_sf_bis = 4*(CS_sf/A_sf)*L_fin;
+%             k_fin = 205;
+%             
+%             param.n_tp_disc = 10;
+%             param.type_h = 'H';
+%             param.type_c = 'H';
+%             param.A_h_tot = A_wf;
+%             param.A_c_tot = A_sf;
+%             param.V_h_tot = 0.014;
+%             param.V_c_tot = 0.7585;
+%             param.fin_h = 'none';
+%             param.fin_c.k = k_fin;
+%             param.fin_c.th = th_fin;
+%             param.fin_c.r = Rt_ex;
+%             param.fin_c.B = B_fin;
+%             param.fin_c.H = H_fin;
+%             param.fin_c.omega_f = omega_f;
+%             param.fin_c.omega_t = omega_t;
+%             param.Dh_c = Dh_sf;
+%             param.Dh_h = Dh_wf;
+%             param.CS_c = CS_sf;
+%             param.CS_h = CS_wf;
+%             param.Lt_h = Lt*N_pass;
+%             param.n_canals_c = 1;
+%             param.n_canals_h = N_pipes;
+%             param.n_row_tubes = N_row;
+%             param.fin_pitch = pitch_fin;
+%             param.tube_longitudital_pitch = X_f_l;
+%             param.Dh_c_bis = Dh_sf_bis;
+%             param.n_tp_disc = 10;
+%             param.modelType = 'hConvCor';
+%             param.correlation_h.type_1phase = 'Gnielinski_and_Sha';
+%             param.correlation_h.type_2phase = 'Cavallini_condensation';
+%             param.correlation_c.type_1phase = 'VDI_finned_tubes_staggered';
+%             param.correlation_c.type_2phase = 'VDI_finned_tubes_staggered';
+%             param.correlation_h.void_fraction = 'Homogenous';
+%             param.correlation_c.void_fraction = 'Homogenous';                      
+%             param.displayResults = 0;
+%             param.displayTS = 1;
+%             param.advancedUser = 1;
+%             param.generateTS = 1;
+%             param.fact_corr_sp_h = 0.4;
+%             param.fact_corr_2p_h = 1;
+%             param.fact_corr_sp_c = 1;
+%             param.fact_corr_2p_c = 1;
+    param.n_tp_disc = 10;
+    param.modelType = 'hConvCor';
+    param.correlation_h.type_1phase = 'Martin';
+    param.correlation_h.type_2phase = 'Han_condensation';
+    param.correlation_h.void_fraction = 'Homogenous';
+
+    param.correlation_c.type_1phase = 'Martin';
+    param.correlation_c.type_2phase = 'Han_boiling';
+    param.type_h = 'H';   
+    param.type_c = 'H';   
     
     L_phex_ev = 0.519-0.06;
     W_phex_ev = 0.191;
@@ -263,9 +337,9 @@ if nargin == 0
 % omega_t = A_sf/(2*pi*Rt_ex*Lt*N_pipes*N_pass);
 % k_fin = 205;
 %     
-param.displayResults = 0;
-param.displayTS = 1;
-param.generateTS = 1;
+% param.displayResults = 0;
+% param.displayTS = 1;
+% param.generateTS = 1;
 % 
 % param.type_h = 'H';
 % param.type_c = 'H';
@@ -860,7 +934,10 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                                 mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
                                 mu_h_vap = CoolProp.PropsSI('V','P',P_h_su,'Q',1,fluid_h);
                                 f_void = @(q) VoidFraction_Hughmark(q, rho_h_vap,  rho_h_liq, mu_h_vap, mu_h_liq, param.Dh_h,  m_dot_h/param.n_canals_h/param.CS_h);
-                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);                                
+                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);           
+                            case 'SlipRatio'
+                                f_void = @(q) VoidFraction_SlipRatio(q, rho_h_vap,  rho_h_liq, param.SlipRatio_h);
+                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
                         end
 
                         out.M_h_vec(i) = out.V_h_vec(i)/(q_h_vap-q_h_1iq)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
@@ -893,7 +970,10 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                                 mu_c_vap = CoolProp.PropsSI('V','P',P_c_su,'Q',1,fluid_c);
                                 f_void = @(q) VoidFraction_Hughmark(q, rho_c_vap,  rho_c_liq, mu_c_vap, mu_c_liq, param.Dh_c,  m_dot_c/param.n_canals_c/param.CS_c);
                                 Weight_c = integral(f_void, q_c_1iq, q_c_vap);
-
+                                
+                            case 'SlipRatio'
+                                f_void = @(q) VoidFraction_SlipRatio(q, rho_c_vap,  rho_c_liq, param.SlipRatio_c);
+                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
                         end
                         
                         out.M_c_vec(i) = out.V_c_vec(i)/(q_c_vap-q_c_1iq)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
@@ -1021,8 +1101,8 @@ TS.x_geom = [0 cumsum(out.V_h_vec)./param.V_h_tot];
 if param.displayTS == 1
     figure
     hold on
-    plot(TS.x, TS.T_c-273.15,'s-' ,'linewidth',2)
-    plot(TS.x, TS.T_h-273.15,'o-' ,'linewidth',2)
+    plot(TS.x_geom, TS.T_c-273.15,'s-' ,'linewidth',2)
+    plot(TS.x_geom, TS.T_h-273.15,'o-' ,'linewidth',2)
     grid on
     xlabel('Heat power fraction [-]','fontsize',14,'fontweight','bold')
     ylabel('Temperature [°C]','fontsize',14,'fontweight','bold')
@@ -1375,7 +1455,7 @@ for j = 1:length(out.T_h_vec)-1
                     Nu_2 = 1.953*(Re_h*Pr_h*info.Dh_h/info.Lt_h)^0.33333333333333333333333333333;
                     Nu_h = (Nu_1^3 + 0.6^3 + (Nu_2-0.6)^3)^0.3333333333333333333333;
                 end
-                out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
+                out.hConv_h(j) = info.fact_corr_sp_h*Nu_h*k_h/info.Dh_h;
         end
         
     elseif strcmp(out.type_zone_h{j}, 'tp') 
@@ -1437,14 +1517,14 @@ for j = 1:length(out.T_h_vec)-1
                 h_h_a = h_h_lo*(1 + (1.128*x_h^0.817)*((rho_h_l/rho_h_v)^0.3685)*((mu_h_l/mu_h_v)^0.2363)*((1-mu_h_v/mu_h_l)^2.144)*(Pr_h_l^-0.1));                
                 
                 if J_v > J_v_T %delta_T-independent flow regime
-                    out.hConv_h(j) = h_h_a;
+                    out.hConv_h(j) = info.fact_corr_2p_h*h_h_a;
                 elseif J_v <= J_v_T %delta_T-dependent flow regime
                     i_fg_h = CoolProp.PropsSI('H', 'Q', 1, 'P', P_h_su, fluid_h) - CoolProp.PropsSI('H', 'Q', 0, 'P', P_h_su, fluid_h);
                     T_sat = (0.5*out.T_h_vec(j)+0.5*out.T_h_vec(j+1));
                     T_wall = (0.25*out.T_h_vec(j)+0.25*out.T_h_vec(j+1) + 0.25*out.T_c_vec(j)+0.25*out.T_c_vec(j+1));
                     h_strat = 0.725*((1+0.741*((1-x_h)/x_h)^0.3321)^-1)*(((k_h_l^3*rho_h_l*(rho_h_l-rho_h_v)*g*i_fg_h)/(mu_h_l*d_i*(T_sat-T_wall)))^0.25)+((1-x_h^0.087)*h_h_lo);
                     h_h_d = J_v/J_v_T*(h_h_a*(J_v_T/J_v)^0.8 - h_strat) + h_strat;
-                    out.hConv_h(j) = h_h_d;
+                    out.hConv_h(j) = info.fact_corr_2p_h*h_h_d;
                 end
                 
             case 'Shah_condensation'
@@ -1455,7 +1535,7 @@ for j = 1:length(out.T_h_vec)-1
                 G_h = (m_dot_h/info.n_canals_h)/info.CS_h;
                 Re_h_l = G_h*info.Dh_h/mu_h_l;  
                 Pr_h_l = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_h_su, fluid_h);
-                out.hConv_h(j) = 0.023*(k_h_l/info.Dh_h)*(Re_h_l^0.8)*(Pr_h_l^0.4)*(((1-x_h)^0.8)+ ((3.8*(x_h^0.76)*(1-x_h)^0.04)/(p_h_star^0.38)));
+                out.hConv_h(j) = info.fact_corr_2p_h*0.023*(k_h_l/info.Dh_h)*(Re_h_l^0.8)*(Pr_h_l^0.4)*(((1-x_h)^0.8)+ ((3.8*(x_h^0.76)*(1-x_h)^0.04)/(p_h_star^0.38)));
                 
                                             
         end
@@ -1489,10 +1569,10 @@ for j = 1:length(out.T_h_vec)-1
                 f_c = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
                 Nu_c = info.fact_corr_sp_c*0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^0.374;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
-                out.Re_c(j) = Re_c;
-                out.Nu_c(j) = Nu_c;
-                out.Pr_c(j) = Pr_c;
-                out.k_c(j) = k_c;
+%                 out.Re_c(j) = Re_c;
+%                 out.Nu_c(j) = Nu_c;
+%                 out.Pr_c(j) = Pr_c;
+%                 out.k_c(j) = k_c;
                 
                 
             case 'Wanniarachchi'
@@ -1512,10 +1592,10 @@ for j = 1:length(out.T_h_vec)-1
                 j_Nu_c_l = 3.65*(90-info.theta*180/pi)^(-0.455)*Re_c^-0.339;
                 Nu_c = info.fact_corr_sp_c*(j_Nu_c_l^3 + j_Nu_c_t^3)^(1/3)*Pr_c^(1/3);
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
-                out.Re_c(j) = Re_c;
-                out.Nu_c(j) = Nu_c;
-                out.Pr_c(j) = Pr_c;
-                out.k_c(j) = k_c;
+%                 out.Re_c(j) = Re_c;
+%                 out.Nu_c(j) = Nu_c;
+%                 out.Pr_c(j) = Pr_c;
+%                 out.k_c(j) = k_c;
                 
             case 'Thonon'
                 if strcmp(info.type_c, 'H')
@@ -1545,10 +1625,10 @@ for j = 1:length(out.T_h_vec)-1
                 end
                 Nu_c = info.fact_corr_sp_c*C*Re_c^m*Pr_c^0.33333333;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
-                out.Re_c(j) = Re_c;
-                out.Nu_c(j) = Nu_c;
-                out.Pr_c(j) = Pr_c;
-                out.k_c(j) = k_c;     
+%                 out.Re_c(j) = Re_c;
+%                 out.Nu_c(j) = Nu_c;
+%                 out.Pr_c(j) = Pr_c;
+%                 out.k_c(j) = k_c;     
                 
             case 'Gnielinski'
                 if strcmp(info.type_c, 'H')
@@ -1569,7 +1649,7 @@ for j = 1:length(out.T_h_vec)-1
                 else
                     Nu_c = 3.66;
                 end
-                out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
+                out.hConv_c(j) = info.fact_corr_sp_c*Nu_c*k_c/info.Dh_c;
                 
             case 'VDI_finned_tubes_staggered' %source: VDI Heat Atlas, section M1 - 2.6, page 1275
                 if strcmp(info.type_c, 'H')
@@ -1584,7 +1664,7 @@ for j = 1:length(out.T_h_vec)-1
                 end
                 G_c = m_dot_c/info.n_canals_c/info.CS_c; % Warning, CS_c is the minimum free flow surface area and n_canals_c is taken equal to 1               
                 Re_c = G_c*info.Dh_c/mu_c; % Warning, Dh_c is the externel diameter of the tubes forming the bank
-                Nu_c = 0.38*Re_c^0.6*Pr_c^0.33333333*info.fin_c.omega_t^-0.15;
+                Nu_c = info.fact_corr_sp_c*0.38*Re_c^0.6*Pr_c^0.33333333*info.fin_c.omega_t^-0.15;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
                 
             case 'Wang_finned_tubes_staggered'
@@ -1612,7 +1692,7 @@ for j = 1:length(out.T_h_vec)-1
                 p4 = -5.735 +1.21*log(Re_c_Dc/N);
                 p5 = -0.93;
                 j_c = 0.086*(Re_c_Dc^p1)*(N^p2)*((F_p/D_c)^p3)*((F_p/D_h)^p4)*((F_p/P_l)^p5);
-                Nu_c = j_c*Re_c_Dc*Pr_c^0.33333333333333333333;
+                Nu_c = info.fact_corr_sp_c*j_c*Re_c_Dc*Pr_c^0.33333333333333333333;
                 out.hConv_c(j) = Nu_c*k_c/D_c;
                 
         end
@@ -1716,7 +1796,7 @@ for j = 1:length(out.T_h_vec)-1
                 k = 0;
                 while k <= 10 && err_q > 5e-2 %iterate for boiling number
                     k = k+1;
-                    h = 55*(p_star^(0.12-0.2*log10(Rp)))*((-log10(p_star))^(-0.55))*(q^0.67)*(M^(-0.5));
+                    h = info.fact_corr_2p_c*55*(p_star^(0.12-0.2*log10(Rp)))*((-log10(p_star))^(-0.55))*(q^0.67)*(M^(-0.5));
                     U = (1/h +  1/out.hConv_h(j))^-1;
                     A_tp = AU_tp/U;
                     q_new = out.Qdot_vec(j)/A_tp;
@@ -1782,6 +1862,7 @@ eta_fin = tanh(m*R_e*phi)/(m*R_e*phi);
 end
 
 function one_alpha = VoidFraction_Hughmark(q, rho_v, rho_l, mu_v, mu_l, D, G)
+
 one_alpha = NaN*ones(size(q));
 for i = 1:length(q)
     q1 = q(i);
@@ -1802,7 +1883,7 @@ for i = 1:length(q)
         Kh = exp(ln_Kh);
         alpha_new = Kh.*beta;
         res_alpha= norm(abs(alpha-alpha_new)./alpha_new);
-        alpha = alpha_new;
+        alpha = min(alpha_new, 1);
     end
     one_alpha(i) = 1-alpha;
 end
@@ -1816,5 +1897,10 @@ end
 
 function one_alpha = VoidFraction_homogenous(q, rho_v, rho_l)
 alpha = 1./(1+((1-q)./q).*(rho_v/rho_l));
+one_alpha = 1-alpha;
+end
+
+function one_alpha = VoidFraction_SlipRatio(q, rho_v, rho_l, S)
+alpha = 1./(1+(((1-q)./q).*(rho_v/rho_l)*S));
 one_alpha = 1-alpha;
 end
