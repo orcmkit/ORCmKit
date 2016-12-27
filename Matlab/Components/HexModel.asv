@@ -1383,7 +1383,7 @@ for j = 1:length(out.T_h_vec)-1
                     f_90 = 9.75/Re_h^0.289;
                 end               
                 f_h = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
-                Nu_h = info.fact_corr_sp_h*0.205*(Pr_h^0.33333333)*(f_h*Re_h^2*sin(2*info.theta))^(info.fact2_corr_sp_h*0.374);
+                Nu_h = info.fact_corr_sp_h*0.205*(Pr_h^0.33333333)*(f_h*Re_h^2*sin(2*info.theta))^0.374;
                 out.hConv_h(j) = Nu_h*k_h/info.Dh_h;
                 
             case 'Wanniarachchi'
@@ -1567,7 +1567,7 @@ for j = 1:length(out.T_h_vec)-1
                     f_90 = 9.75/Re_c^0.289;
                 end
                 f_c = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
-                Nu_c = info.fact_corr_sp_c*0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^(info.fact2_corr_sp_c*0.374);
+                Nu_c = info.fact_corr_sp_c*0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^0.374;
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
 %                 out.Re_c(j) = Re_c;
 %                 out.Nu_c(j) = Nu_c;
