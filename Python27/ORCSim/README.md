@@ -14,6 +14,9 @@ Two solution schemes are currently implemented:
 
 ORCSim has been validated against experimental data. Please cite the framework as:
 
-* Ziviani,D., Woodland,B.J., Georges,E., Groll,E.A., Braun,J.E., Horton,W.T., van den Broek,M., De Paepe,M. "DEVELOPMENT AND A VALIDATION OF A CHARGE SENSITIVE ORGANIC RANKINE CYCLE (ORC) SIMULATION TOOL", Energies 2016 (Accepted).
+* Davide Ziviani, Brandon J. Woodland, Emeline Georges, Eckhard A. Groll, James E. Braun, W. Travis Horton, Martijn van den Broek, Michel de Paepe, "Development and Validation of a Charge Sensitive Organic Rankine Cycle (ORC) Simulation Tool". Energies 2016, (9)6, 389; doi:10.3390/en9060389
+
+For additional information or requests please contact:
+* Davide Ziviani - davide.ziviani@ugent.be / dziviani@purdue.edu
 
 
