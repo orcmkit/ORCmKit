@@ -18,7 +18,10 @@ The ORCmKit library should be referenced as:
 * Rémi Dickes, Davide Ziviani, Michel de Paepe, Martijn van den Broek, Sylvain Quoilin, Vincent Lemort, "ORCmKit: an open-source library for organic Rankine cycle modelling and analysis", PROCEEDINGS OF ECOS 2016 - THE 29TH INTERNATIONAL CONFERENCE ON
 EFFICIENCY, COST, OPTIMIZATION, SIMULATION AND ENVIRONMENTAL IMPACT OF ENERGY SYSTEMS JUNE 19-23, 2016, PORTOROŽ, SLOVENIA.
 
+The ORCSim library in Python should be referenced as:
+
+* Davide Ziviani, Brandon J. Woodland, Emeline Georges, Eckhard A. Groll, James E. Braun, W. Travis Horton, Martijn van den Broek, Michel de Paepe, "Development and Validation of a Charge Sensitive Organic Rankine Cycle (ORC) Simulation Tool". Energies 2016, (9)6, 389; doi:10.3390/en9060389
 
 For additional information or requests please contact:
 * Rémi Dickes - rdickes@ulg.ac.be
-* Davide Ziviani - davide.ziviani@ugent.be
+* Davide Ziviani - davide.ziviani@ugent.be / dziviani@purdue.edu
