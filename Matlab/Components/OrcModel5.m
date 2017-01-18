@@ -406,9 +406,9 @@ elseif strcmp(param.solverType, 'M_imposed')  %% CASE 2 : REFRIGERANT MASS IMPOS
             k= 1;
             out_ORC_best.res = 1e10;
             stop = 0;
-            options_fmincon = optimset('Disp',param.displayIter,'Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
+            %options_fmincon = optimset('Disp',param.displayIter,'Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
             %options_fminsearch = optimset('Display','none','TolX', 1e-10, 'TolFun', 1e-10, 'MaxIter', 1e3, 'MaxFunEvals', 1e9,'OutputFcn',@ outputfunFS);
-            %options_pattsearch = psoptimset('Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'TolMesh', 1e-8, 'MaxIter', 1e3, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
+            options_pattsearch = psoptimset('Display','iter','TolX', 1e-10, 'TolFun', 1e-10, 'TolMesh', 1e-8, 'MaxIter', 1e3, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
             %parpool
             while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
                 
@@ -429,9 +429,9 @@ elseif strcmp(param.solverType, 'M_imposed')  %% CASE 2 : REFRIGERANT MASS IMPOS
                 param.CD.generateTS = 0;
                 param.REC.generateTS = 0;
                 f = @(x) FCT_ORC_Ext_Npp_Nexp_res_2( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
-                x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
+                %x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
                 %[x, ~, ~, ~] = fminsearch(f,x0./ub, options_fminsearch);
-                %[x, ~, ~,  ] = patternsearch(f,x0./ub,[],[],[],[],lb./ub,ub./ub,[],options_pattsearch);
+                [x, ~, ~,  ] = patternsearch(f,x0./ub,[],[],[],[],lb./ub,ub./ub,[],options_pattsearch);
                 param.eval_type = 'long';
                 param.EV.generateTS = 1;
                 param.CD.generateTS = 1;
