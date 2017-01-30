@@ -64,11 +64,14 @@ def Write2CSV(Class,filename,append=False):
         for item in dir(Class):
             #If the item has an outputList, collect it
             if hasattr(getattr(Class,item),'OutputList'):
-                head,units,vals=OL2Strings(getattr(Class,item).OutputList())
-                componentList+=[BuildComponentList(units,item)]
-                headList+=[head]
-                unitsList+=[units]
-                valsList+=[vals]
+                OL=getattr(Class,item).OutputList() 
+                #Unless it's empty
+		if OL != []:
+		    head,units,vals=OL2Strings(OL)
+		    componentList+=[BuildComponentList(units,item)]
+		    headList+=[head]
+		    unitsList+=[units]
+		    valsList+=[vals]
         components=','.join(componentList)
         head=','.join(headList)
         units=','.join(unitsList)
