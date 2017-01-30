@@ -193,7 +193,7 @@ def ORCSystem_Kortrijk(Inputs, run):
         Cycle.PreconditionedSolve_ORCRegen(Inputs)
         Cycle.ConvergencePlot()
         Cycle.BaselineTs_Celsius(Inputs)
-        #Write2CSV(Cycle,'ORC_Cycle.csv', append=run>0)
+        Write2CSV(Cycle,'ORC_Cycle.csv', append=run>0)
 
     print Cycle.OutputList()
 
