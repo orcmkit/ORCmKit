@@ -10,7 +10,7 @@ end
 %if strcmp(param.solverType, 'M_imposed') && isfield(param, 'x0') && param.limit_P_pp_su
 %    P_pp_su_lb = 0.95*param.x0(2);
 %else
-    P_pp_su_lb = max(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su-20, fluid_wf), CoolProp.PropsSI('P_min', 'Q', 0, 'T', 273.15, fluid_wf));
+P_pp_su_lb = max(CoolProp.PropsSI('P', 'Q', 0, 'T', T_ctf_su-20, fluid_wf), CoolProp.PropsSI('P_min', 'Q', 0, 'T', 273.15, fluid_wf));
 %end
 P_pp_ex_ub = CoolProp.PropsSI('P', 'Q', 0, 'T', min(CoolProp.PropsSI('Tcrit', 'Q', 0, 'T',273, fluid_wf)-2, T_htf_su-1), fluid_wf);
 rp_max = P_pp_ex_ub/P_pp_su_lb;
@@ -31,7 +31,7 @@ if strcmp(param.solverType, 'M_imposed')
     %if strcmp(param.solverType, 'M_imposed') && isfield(param, 'x0') && param.limit_P_pp_su
     %    T_pp_su_ub = param.x0(4)+1;
     %else
-        T_pp_su_ub = CoolProp.PropsSI('T', 'P', P_pp_su_ub, 'Q', 0, fluid_wf); %CoolProp.PropsSI('H', 'P', P_pp_su_ub, 'Q', 0, fluid_wf);
+    T_pp_su_ub = CoolProp.PropsSI('T', 'P', P_pp_su_ub, 'Q', 0, fluid_wf); %CoolProp.PropsSI('H', 'P', P_pp_su_ub, 'Q', 0, fluid_wf);
     %end
     x_h_pp_su_guess0 = linspace(0, 1, param.init(4));
     [res,P_pp_su_guess_vec, P_pp_su_lb_vec, P_pp_su_ub_vec, P_pp_ex_guess_vec, P_pp_ex_lb_vec, P_pp_ex_ub_vec, h_ev_ex_lb_vec, h_ev_ex_guess_vec, h_ev_ex_ub_vec,T_pp_su_lb_vec,T_pp_su_guess_vec,T_pp_su_ub_vec] = deal(NaN*ones(1,length(P_pp_su_guess0)*length(x_rp_guess0)*length(x_h_ev_ex_guess0)*length(x_h_pp_su_guess0)));
@@ -62,20 +62,20 @@ for i_P_pp_su = 1: length(P_pp_su_guess0)
                     h_ev_ex_ub_vec(index) = h_ev_ex_ub;
                     
                     T_pp_su_lb_vec(index)    = T_pp_su_lb;
-%                     h_pp_su_guess_vec(index) = (1-x_h_pp_su_guess0(i_hpp_su))*CoolProp.PropsSI('H', 'P', P_pp_su_guess0(i_P_pp_su), 'T', T_ctf_su-1, fluid_wf) + x_h_pp_su_guess0(i_hpp_su)*CoolProp.PropsSI('H', 'P', P_pp_su_guess0(i_P_pp_su), 'T', CoolProp.PropsSI('T', 'P', P_pp_su_guess0(i_P_pp_su), 'Q', 0, fluid_wf)-1, fluid_wf);
-                    T_pp_su_ub_vec(index) = T_pp_su_ub;                                     
-%                     h_pp_su_lb_vec(index)    =  T_ctf_su-10; %0.0001; %h_pp_su_lb;
+                    %                     h_pp_su_guess_vec(index) = (1-x_h_pp_su_guess0(i_hpp_su))*CoolProp.PropsSI('H', 'P', P_pp_su_guess0(i_P_pp_su), 'T', T_ctf_su-1, fluid_wf) + x_h_pp_su_guess0(i_hpp_su)*CoolProp.PropsSI('H', 'P', P_pp_su_guess0(i_P_pp_su), 'T', CoolProp.PropsSI('T', 'P', P_pp_su_guess0(i_P_pp_su), 'Q', 0, fluid_wf)-1, fluid_wf);
+                    T_pp_su_ub_vec(index) = T_pp_su_ub;
+                    %                     h_pp_su_lb_vec(index)    =  T_ctf_su-10; %0.0001; %h_pp_su_lb;
                     
                     T_pp_su_guess_vec(index) = (1-x_h_pp_su_guess0(i_hpp_su))*T_pp_su_lb_vec(index) + x_h_pp_su_guess0(i_hpp_su)*(CoolProp.PropsSI('T', 'P', P_pp_su_guess0(i_P_pp_su), 'Q', 0, fluid_wf)-0.000001);
                     %T_pp_su_guess_vec(index) = (1-x_h_pp_su_guess0(i_hpp_su))*T_pp_su_lb_vec(index) + x_h_pp_su_guess0(i_hpp_su)*T_pp_su_ub;
                     
-                    %h_pp_su_ub_vec(index) = CoolProp.PropsSI('T', 'P', P_pp_su_ub, 'Q', 0, fluid_wf); %h_pp_su_ub;                                     
+                    %h_pp_su_ub_vec(index) = CoolProp.PropsSI('T', 'P', P_pp_su_ub, 'Q', 0, fluid_wf); %h_pp_su_ub;
                     param.eval_type = 'fast';
                     param.EV.generateTS = 0;
                     param.CD.generateTS = 0;
                     param.REC.generateTS = 0;
                     lb_test = [0 0 0 0];
-%                     ub_test = [P_pp_ex_guess_vec(index) P_pp_su_guess_vec(index) h_ev_ex_guess_vec(index) h_pp_su_guess_vec(index)];
+                    %                     ub_test = [P_pp_ex_guess_vec(index) P_pp_su_guess_vec(index) h_ev_ex_guess_vec(index) h_pp_su_guess_vec(index)];
                     ub_test = [P_pp_ex_guess_vec(index) P_pp_su_guess_vec(index) h_ev_ex_guess_vec(index) T_pp_su_guess_vec(index)];
                     x_test = [1 1 1 1];
                     
@@ -167,12 +167,12 @@ if strcmp(param.solverType, 'M_imposed') && isfield(param, 'x0_SatLiq')
             x_test = [1 1 1 1];
             
             [guess_x0_SatLiq, ~] = FCT_ORC_Ext_Npp_Nexp_2(x_test, lb_test, ub_test, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
-
+            
             if any(guess_x0_SatLiq.flag.value < 0) || guess_x0_SatLiq.res > 1
                 res_x0_SatLiq(index) = NaN;
             else
                 res_x0_SatLiq(index) = guess_x0_SatLiq.res;
-            end                                    
+            end
         end
     end
     P_pp_su_guess_vec = [P_pp_su_guess_vec_x0_SatLiq P_pp_su_guess_vec];
@@ -209,12 +209,12 @@ if isfield(param, 'x0')
         ub0_matrix = [P_pp_ex_ub_vec_x0' P_pp_su_ub_vec_x0' h_ev_ex_ub_vec_x0'];
         lb0_matrix =[P_pp_ex_lb_vec_x0' P_pp_su_lb_vec_x0' h_ev_ex_lb_vec_x0'];
     elseif strcmp(param.solverType, 'M_imposed')
-         T_pp_su_lb_vec_x0 = T_pp_su_lb*ones(1,length(x0_vec));
-         T_pp_su_ub_vec_x0 = T_pp_su_ub*ones(1,length(x0_vec));
-         T_pp_su_guess_vec_x0 = max(T_pp_su_lb+0.01, min(param.x0(4), T_pp_su_ub-0.01))*ones(1,length(x0_vec));
-         x0_matrix = [P_pp_ex_guess_vec_x0' P_pp_su_guess_vec_x0' h_ev_ex_guess_vec_x0' T_pp_su_guess_vec_x0'];
-         ub0_matrix = [P_pp_ex_ub_vec_x0' P_pp_su_ub_vec_x0' h_ev_ex_ub_vec_x0' T_pp_su_ub_vec_x0'];
-         lb0_matrix =[P_pp_ex_lb_vec_x0' P_pp_su_lb_vec_x0' h_ev_ex_lb_vec_x0' T_pp_su_lb_vec_x0'];
+        T_pp_su_lb_vec_x0 = T_pp_su_lb*ones(1,length(x0_vec));
+        T_pp_su_ub_vec_x0 = T_pp_su_ub*ones(1,length(x0_vec));
+        T_pp_su_guess_vec_x0 = max(T_pp_su_lb+0.01, min(param.x0(4), T_pp_su_ub-0.01))*ones(1,length(x0_vec));
+        x0_matrix = [P_pp_ex_guess_vec_x0' P_pp_su_guess_vec_x0' h_ev_ex_guess_vec_x0' T_pp_su_guess_vec_x0'];
+        ub0_matrix = [P_pp_ex_ub_vec_x0' P_pp_su_ub_vec_x0' h_ev_ex_ub_vec_x0' T_pp_su_ub_vec_x0'];
+        lb0_matrix =[P_pp_ex_lb_vec_x0' P_pp_su_lb_vec_x0' h_ev_ex_lb_vec_x0' T_pp_su_lb_vec_x0'];
     end
     index = 0;
     for k = 1:length(x0_vec)

@@ -131,18 +131,17 @@ function [out,TS] = HexModel(fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su,
 
 
 %% DEMONSTRATION CASE
-
 if nargin == 0    
     % Define a demonstration case if HexModel.mat is not executed externally  
     
     fluid_h = 'PiroblocBasic';                                               % Nature of the hot fluid           [-]
-    m_dot_h = 0.9503;                                                          % Mass flow rat of the hot fluid    [kg/s]
+    m_dot_h = 0.09;                                                          % Mass flow rat of the hot fluid    [kg/s]
     P_h_su =  2e+05;                                                          % Supply pressure of the hot fluid  [Pa]
-    in_h_su = 362.2242;      % Supply h or T of the hot fluid  	[J/kg pr K]
+    in_h_su = 90+273.15;      % Supply h or T of the hot fluid  	[J/kg pr K]
     fluid_c = 'R245fa';                                                     % Nature of the cold fluid        	[-]
     m_dot_c = 0.0252;                                                      % Mass flow rat of the cold fluid  	[kg/s]
-    P_c_su = 7.188e5;                                                           % Supply pressure of the cold fluid	[Pa]
-    in_c_su = 2.5876e5;%%CoolProp.PropsSI('H','P',P_c_su,'T',20+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
+    P_c_su = 4.188e5;                                                           % Supply pressure of the cold fluid	[Pa]
+    in_c_su = CoolProp.PropsSI('H','P',P_c_su,'T',20+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
     
     % Example of impletenation in the case of a correlation-based model for a plate heat exchanger
     
@@ -178,14 +177,14 @@ if nargin == 0
     param.CS_h = CS_ev;
     param.n_canals_c = Nc_wf_ev;
     param.n_canals_h = Nc_sf_ev;
-    param.n_tp_disc = 20;
+    param.n_tp_disc = 2;
     param.modelType = 'hConvCor';
     param.correlation_h.type_1phase = 'Martin';
     param.correlation_h.type_2phase = 'Longo_condensation';
     param.correlation_c.type_1phase = 'Martin';
     param.correlation_c.type_2phase = 'Almalfi_boiling';
-    param.correlation_h.void_fraction = 'Homogenous';
-    param.correlation_c.void_fraction = 'Homogenous';
+    param.correlation_h.void_fraction = 'Hughmark';
+    param.correlation_c.void_fraction = 'Hughmark';
     
     param.fact_corr_sp_h = 0.268088007690337;
     param.fact_corr_2p_h = 1;
@@ -196,7 +195,7 @@ if nargin == 0
     param.fact2_corr_sp_c = 1;
     param.fact2_corr_2p_c = 1;  
     param.displayResults = 0;
-    param.displayTS = 1;
+    param.displayTS = 0;
     param.generateTS = 1;
 
     % For another example of implementation, please load the .mat file
@@ -216,32 +215,30 @@ if not(isfield(param,'displayResults'))
     %default.
 end
 
-if not(isfield(param,'V_h_tot'))
-    param.V_h_tot = 0;
-end
-if not(isfield(param,'V_c_tot'))
-    param.V_c_tot = 0;
-end
-if not(isfield(param,'generateTS'))
-    param.generateTS = 1;
-end
-if not(isfield(param,'n_tp_disc'))
-    param.n_tp_disc = 2;
-end
 
 % Evaluation of the hot fluid (HF) supply temperature
 if strcmp(param.type_h,'H')
     T_h_su = CoolProp.PropsSI('T','P',P_h_su,'H',in_h_su, fluid_h);
+    h_h_l = CoolProp.PropsSI('H','P',P_h_su,'Q',0,fluid_h);
+    h_h_v = CoolProp.PropsSI('H','P',P_h_su,'Q',1,fluid_h);
 elseif strcmp(param.type_h,'T')
     T_h_su = in_h_su;
+    h_h_l = NaN;
+    h_h_v = NaN;
 end
+
 % Evaluation of the cold fluid (CF) supply temperature
 if strcmp(param.type_c,'H')
     T_c_su = CoolProp.PropsSI('T','P',P_c_su,'H',in_c_su, fluid_c);
+    h_c_l = CoolProp.PropsSI('H','P',P_c_su,'Q',0,fluid_c);
+    h_c_v = CoolProp.PropsSI('H','P',P_c_su,'Q',1,fluid_c);
 elseif strcmp(param.type_c,'T')
     T_c_su = in_c_su;
+    h_c_l = NaN;
+    h_c_v = NaN;
 end
-
+%T_h_su
+%T_c_su  
 flag_reverse = 0;
 if T_h_su<T_c_su  
     if strcmp(param.modelType, 'CstEff')
@@ -258,9 +255,12 @@ if T_h_su<T_c_su
         flag_reverse = 1;
         
     elseif strcmp(param.modelType, 'hConvVar')
-        [fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h);
-        [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c);
-        [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int);
+        %[fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h);
+        %[fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, param.alpha_mass_h] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c);
+        %[fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, param.alpha_mass_c] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, alpha_mass_h_int);
+         [fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, h_h_l_int, h_h_v_int] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, h_h_l, h_h_v);
+         [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, h_h_l, h_h_v] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, h_c_l, h_c_v);
+        [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, h_c_l, h_c_v] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, h_h_l_int, h_h_v_int);
         flag_reverse = 1;
     end
 end
@@ -547,11 +547,18 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             
         case 'hConvVar' % 3-zone moving-boundary model with mass-flow dependent convective heat transfer coefficients
             if isfield(param, 'A_tot')
-                % if only one surface area is specified, then it is the
-                % same for the hot and the cold fluid (ex: CPHEX)
-                param.A_h_tot = param.A_tot;
-                param.A_c_tot = param.A_tot;
+               % if only one surface area is specified, then it is the
+               % same for the hot and the cold fluid (ex: CPHEX)
+               param.A_h_tot = param.A_tot;
+               param.A_c_tot = param.A_tot;
             end
+            if not(isfield(param, 'hugmark_simplified'))
+                param.hugmark_simplified = 0;
+            end
+            if not(isfield(param, 'n_tp_disc'))
+                param.n_tp_disc = 2;
+            end
+            
             
             if isfield(param,'n')
                 param.n_h_liq = param.n;
@@ -567,13 +574,13 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             out_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param); %Evaluate temperature profile based on Q_dot_max
             lb = 0; % Minimum heat power that can be transferred between the two media
             ub = Q_dot_max; % Maximum heat power that can be transferred between the two media
-            f = @(Q_dot) HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param); % function to solve in order to find Q_dot_eff in the heat exchanger
+            f = @(Q_dot) HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, h_c_l, h_c_v); % function to solve in order to find Q_dot_eff in the heat exchanger
             if f(ub) > 0
                 Q_dot_eff = ub; % HEX so oversized that the effective heat power is equal to Q_dot_max
             else
                 Q_dot_eff = zeroBrent ( lb, ub, 1e-8, 1e-8, f ); % Solver driving residuals of HEX_hConvVar_res to zero
             end
-            out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_eff, param); %Evaluate temperature profile based on Q_dot_eff
+            out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_eff, param, h_h_l, h_h_v, h_c_l, h_c_v); %Evaluate temperature profile based on Q_dot_eff
             out.Q_dot_tot = Q_dot_eff;
             out.epsilon_th = Q_dot_eff/Q_dot_max;
             out.h_h_ex = out.H_h_vec(1);
@@ -588,16 +595,18 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             out.hConv_c_vap_mean = mean(out.hConv_c(strcmp(out.type_zone_c, 'vap')));
             
             % Entropy vector calculation
-            [out.s_h_vec, out.s_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
+            [out.s_h_vec, out.s_c_vec, out.q_h_vec, out.q_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
             if param.generateTS
                 if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
                     for i = 1: length(out.H_h_vec)
                         out.s_h_vec(i) = CoolProp.PropsSI('S','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+                        out.q_h_vec(i) = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
                     end
                 end
                 if strcmp(param.type_c,'H') %if not an incompressible fluid, calculate entropy vector
                     for i = 1: length(out.H_c_vec)
                         out.s_c_vec(i) = CoolProp.PropsSI('S','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+                        out.q_c_vec(i) = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
                     end
                 end
             end
@@ -605,53 +614,188 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             % Mass calculation
             out.V_h_vec = param.V_h_tot*(out.A_h./sum(out.A_h));
             out.V_c_vec = param.V_c_tot*(out.A_h./sum(out.A_h));
-
-            for i = 1: length(out.V_h_vec)
+            [out.M_h_vec, out.M_c_vec, out.Weight_c_vec, out.Weight_h_vec] = deal(NaN*ones(1, length(out.T_h_vec)-1));
                 
-                if strcmp(param.type_h,'H')
-                    if strcmp(out.type_zone_h{i},  'tp') 
-                        if strcmp(param.type_mass,'Zivi_integrated')
-                            rho_h_vap = CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h);
-                            rho_h_liq = CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h);
-                            x2 = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h);
-                            x1 = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
-                            S =  (rho_h_vap/rho_h_liq)^(-1/3);
-                            K = rho_h_vap/rho_h_liq*S;
-                            alpha_mass_h = -1*((K*(log(((x2-1)*K-x2)/((x1-1)*K-x1))+x2-x1))+(x1-x2))/(((x2-x1)*K^2)+(2*K*(x1-x2))+(x2-x1));
-                            out.M_h_vec(i) = out.V_h_vec(i)*(alpha_mass_h*rho_h_vap+ (1-alpha_mass_h)*rho_h_liq);
-                        elseif strcmp(param.type_mass,'Personnal')
-                            alpha_mass_h = param.alpha_mass_h;
-                            out.M_h_vec(i) = out.V_h_vec(i)*(alpha_mass_h*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h)+(1-alpha_mass_h)*CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h));
-                        end                        
+            if strcmp(param.type_h,'H')
+                rho_h_liq = CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h);
+                rho_h_vap = CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h);
+                
+                for i = 1: length(out.V_h_vec)
+                    
+                    if strcmp(out.type_zone_h{i},  'tp')
+                        
+                        q_h_1iq = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
+                        q_h_vap = min(0.9999,CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h));
+                        
+                        switch param.correlation_h.void_fraction
+                            case 'Homogenous'
+                                f_void = @(q) VoidFraction_homogenous(q, rho_h_vap,  rho_h_liq);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                                
+                            case 'Zivi'
+                                f_void = @(q) VoidFraction_Zivi(q, rho_h_vap,  rho_h_liq);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                                
+                            case 'Hughmark'
+                                mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
+                                mu_h_vap = CoolProp.PropsSI('V','P',P_h_su,'Q',1,fluid_h);
+                                f_void = @(q) VoidFraction_Hughmark(q, rho_h_vap,  rho_h_liq, mu_h_vap, mu_h_liq, param.Dh_h,  m_dot_h/param.n_canals_h/param.CS_h);
+
+                                if param.hugmark_simplified %== 1
+                                    %nbr_step = param.nbr_divistion_voidFraction;
+                                    %q_vec = linspace(q_h_1iq, q_h_vap, nbr_step);
+                                    %Weight_h = 1/(q_h_vap-q_h_1iq)*trapz(q_vec, f_void(q_vec));
+                                %elseif param.hugmark_simplified == 2
+                                    x_int1 = 0.1;    
+                                    x_int2 = 0.9;
+                                    q_vec = [linspace(q_h_1iq, (1-x_int1)*q_h_1iq+x_int1*q_h_vap, 4) linspace((1-x_int1)*q_h_1iq+x_int1*q_h_vap, (1-x_int2)*q_h_1iq+x_int2*q_h_vap, 10) linspace((1-x_int2)*q_h_1iq+x_int2*q_h_vap, q_h_vap, 4)] ;
+                                    Weight_h = 1/(q_h_vap-q_h_1iq)*trapz(q_vec, f_void(q_vec));
+                                else
+                                    Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
+                                end
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                                
+                            case 'LockMart'
+                                mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
+                                mu_h_vap = CoolProp.PropsSI('V','P',P_h_su,'Q',1,fluid_h);
+                                f_void = @(q) VoidFraction_Lockhart_Martinelli(q, rho_h_vap,  rho_h_liq, mu_h_vap, mu_h_liq);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                                
+                            case 'Premoli'
+                                mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
+                                sig_h = CoolProp.PropsSI('I','P',P_h_su,'H', 0.5*out.H_h_vec(i)+0.5*out.H_h_vec(i+1),fluid_h);
+                                f_void = @(q) VoidFraction_Premoli(q, rho_h_vap,  rho_h_liq, mu_h_liq, sig_h, param.Dh_h,  m_dot_h/param.n_canals_h/param.CS_h);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                                
+                            case 'SlipRatio'
+                                f_void = @(q) VoidFraction_SlipRatio(q, rho_h_vap,  rho_h_liq, param.SlipRatio_h);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                                
+                            case 'Zivi_integrated'
+                                x2 = q_h_vap;
+                                x1 = q_h_1iq;
+                                S =  (rho_h_vap/rho_h_liq)^(-1/3);
+                                K = rho_h_vap/rho_h_liq*S;
+                                alpha_mass_h = -1*((K*(log(((x2-1)*K-x2)/((x1-1)*K-x1))+x2-x1))+(x1-x2))/(((x2-x1)*K^2)+(2*K*(x1-x2))+(x2-x1));
+                                Weight_h = 1-alpha_mass_h;
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                                
+                            case 'Personnal'
+                                Weight_h = 1- param.alpha_mass_h;
+                                out.Weight_h_vec(i) = Weight_h;
+                                out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
+                        end
+                        
                     else
                         out.M_h_vec(i) = out.V_h_vec(i)*(CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h)+CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))/2;
                     end
-                else
+                end
+            else
+                for i = 1: length(out.V_h_vec)
                     out.M_h_vec(i) = out.V_h_vec(i)*sf_PropsSI_bar('D', out.T_h_vec(i),  out.T_h_vec(i+1), P_h_su, fluid_h);
                 end
-                
-                if strcmp(param.type_c,'H')
+            end
+                         
+            if strcmp(param.type_c,'H')
+                rho_c_liq = CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c);
+                rho_c_vap = CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c);
+                for i = 1: length(out.V_c_vec)
+
                     if strcmp(out.type_zone_c{i},  'tp')
-                        if strcmp(param.type_mass,'Zivi_integrated')
-                            rho_c_vap = CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c);
-                            rho_c_liq = CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c);
-                            x2 = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c);
-                            x1 = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
-                            S =  (rho_c_vap/rho_c_liq)^(-1/3);
-                            K = rho_c_vap/rho_c_liq*S;
-                            alpha_mass_c = -1*((K*(log(((x2-1)*K-x2)/((x1-1)*K-x1))+x2-x1))+(x1-x2))/(((x2-x1)*K^2)+(2*K*(x1-x2))+(x2-x1));
-                            out.M_c_vec(i) = out.V_c_vec(i)*(alpha_mass_c*rho_c_vap+ (1-alpha_mass_c)*rho_c_liq);
-                        elseif strcmp(param.type_mass,'Personnal')
-                            alpha_mass_c = param.alpha_mass_c;
-                            out.M_c_vec(i) = out.V_c_vec(i)*(alpha_mass_c*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c)+(1-alpha_mass_c)*CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c));
+                        q_c_1iq = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
+                        q_c_vap = min(0.99999,CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c));
+
+                        switch param.correlation_c.void_fraction
+                            case 'Homogenous'
+                                f_void = @(q) VoidFraction_homogenous(q, rho_c_vap,  rho_c_liq);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+
+                            case 'Zivi'
+                                f_void = @(q) VoidFraction_Zivi(q, rho_c_vap,  rho_c_liq);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+                                
+                            case 'Hughmark'
+                                mu_c_liq = CoolProp.PropsSI('V','P',P_c_su,'Q',0,fluid_c);
+                                mu_c_vap = CoolProp.PropsSI('V','P',P_c_su,'Q',1,fluid_c);
+                                f_void = @(q) VoidFraction_Hughmark(q, rho_c_vap,  rho_c_liq, mu_c_vap, mu_c_liq, param.Dh_c,  m_dot_c/param.n_canals_c/param.CS_c);  
+                                if param.hugmark_simplified %== 1
+                                    %nbr_step = param.nbr_divistion_voidFraction;
+                                    %q_vec = linspace(q_c_1iq, q_c_vap, nbr_step);
+                                    %Weight_c = 1/(q_c_vap-q_c_1iq)*trapz(q_vec, f_void(q_vec));
+                                %elseif param.hugmark_simplified == 2
+                                    x_int1 = 0.1;    
+                                    x_int2 = 0.9;
+                                    q_vec = [linspace(q_c_1iq, (1-x_int1)*q_c_1iq+x_int1*q_c_vap, 4) linspace((1-x_int1)*q_c_1iq+x_int1*q_c_vap, (1-x_int2)*q_c_1iq+x_int2*q_c_vap, 10) linspace((1-x_int2)*q_c_1iq+x_int2*q_c_vap, q_c_vap, 4)] ;
+                                    Weight_c = 1/(q_c_vap-q_c_1iq)*trapz(q_vec, f_void(q_vec));
+                                else
+                                    Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);%, 'AbsTol',1e-5,'RelTol',1e-3);
+                                end
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+                                
+                            case 'LockMart'
+                                mu_c_liq = CoolProp.PropsSI('V','P',P_c_su,'Q',0,fluid_c);
+                                mu_c_vap = CoolProp.PropsSI('V','P',P_c_su,'Q',1,fluid_c);
+                                f_void = @(q) VoidFraction_Lockhart_Martinelli(q, rho_c_vap,  rho_c_liq, mu_c_vap, mu_c_liq);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+
+                            case 'Premoli'
+                                mu_c_liq = CoolProp.PropsSI('V','P',P_c_su,'Q',0,fluid_c);
+                                sig_c = CoolProp.PropsSI('I','P',P_c_su,'H', 0.5*out.H_c_vec(i)+0.5*out.H_c_vec(i+1),fluid_c);
+                                f_void = @(q) VoidFraction_Premoli(q, rho_c_vap,  rho_c_liq, mu_c_liq, sig_c, param.Dh_c,  m_dot_c/param.n_canals_c/param.CS_c);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+                                
+                            case 'SlipRatio'
+                                f_void = @(q) VoidFraction_SlipRatio(q, rho_c_vap,  rho_c_liq, param.SlipRatio_c);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+     
+                            case 'Zivi_integrated'
+                                x2 = q_c_vap;
+                                x1 = q_c_1iq;
+                                S =  (rho_c_vap/rho_c_liq)^(-1/3);
+                                K = rho_c_vap/rho_c_liq*S;
+                                alpha_mass_c = -1*((K*(log(((x2-1)*K-x2)/((x1-1)*K-x1))+x2-x1))+(x1-x2))/(((x2-x1)*K^2)+(2*K*(x1-x2))+(x2-x1));
+                                Weight_c = 1-alpha_mass_c;
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
+                                
+                            case 'Personnal'
+                                Weight_c = 1- param.alpha_mass_c;
+                                out.Weight_c_vec(i) = Weight_c;
+                                out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
                         end
                     else
                         out.M_c_vec(i) = out.V_c_vec(i)*(CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c)+CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c))/2;
                     end
-                else
+                end
+            else
+                for i = 1: length(out.V_c_vec)                    
                     out.M_c_vec(i) = out.V_c_vec(i)*sf_PropsSI_bar('D', out.T_c_vec(i),  out.T_c_vec(i+1), P_c_su, fluid_c);
                 end
             end
+            
             out.M_h = sum(out.M_h_vec);
             out.M_c = sum(out.M_c_vec);
             
@@ -673,12 +817,12 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             end
             
         case 'hConvCor' % 3-zone moving-boundary model with empirical correlations from the litterature 
-            if isfield(param, 'A_tot')
-                % if only one surface area is specified, then it is the
-                % same for the hot and the cold fluid (ex: CPHEX)
-                param.A_h_tot = param.A_tot;
-                param.A_c_tot = param.A_tot;
-            end
+            %if isfield(param, 'A_tot')
+            %    % if only one surface area is specified, then it is the
+            %    % same for the hot and the cold fluid (ex: CPHEX)
+            %    param.A_h_tot = param.A_tot;
+            %    param.A_c_tot = param.A_tot;
+            %end
             if not(isfield(param, 'fact_corr_sp_h'))                
                 param.fact_corr_sp_h = 1;
             end
@@ -708,13 +852,13 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             out_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param); %Evaluate temperature profile based on Q_dot_max
             lb = 0; % Minimum heat power that can be transferred between the two media
             ub = Q_dot_max; % Maximum heat power that can be transferred between the two media
-            f = @(Q_dot) HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param); % function to solve in order to find Q_dot_eff in the heat exchanger
+            f = @(Q_dot) HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, h_c_l, h_c_v); % function to solve in order to find Q_dot_eff in the heat exchanger
             if f(ub) > 0
                 Q_dot_eff = ub; % HEX so oversized that the effective heat power is equal to Q_dot_max
             else
-                Q_dot_eff = zeroBrent ( lb, ub, 1e-8, 1e-8, f ); % Solver driving residuals of HEX_hConvVar_res to zero
+                Q_dot_eff = zeroBrent ( lb, ub, 1e-6, 1e-6, f ); % Solver driving residuals of HEX_hConvVar_res to zero
             end
-            out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot_eff), param); %Evaluate temperature profile based on Q_dot_eff
+            out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot_eff), param, h_h_l, h_h_v, h_c_l, h_c_v); %Evaluate temperature profile based on Q_dot_eff
             out.Q_dot_tot = real(Q_dot_eff);
             out.epsilon_th = real(Q_dot_eff)/Q_dot_max;
             out.h_h_ex = out.H_h_vec(1);
@@ -731,7 +875,7 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
 
             
             % Entropy vector calculation
-            [out.s_h_vec, out.s_c_vec] = deal(NaN*ones(1, length(out.H_h_vec)));
+            [out.s_h_vec, out.s_c_vec, out.q_h_vec, out.q_c_vec] = deal(NaN*ones(1, length(out.T_h_vec)));
             if param.generateTS
                 if strcmp(param.type_h,'H') %if not an incompressible fluid, calculate entropy vector
                     for i = 1: length(out.H_h_vec)
@@ -750,96 +894,123 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             % Mass calculation
             out.V_h_vec = param.V_h_tot*(out.A_h./sum(out.A_h));
             out.V_c_vec = param.V_c_tot*(out.A_h./sum(out.A_h));
+            [out.M_h_vec, out.M_c_vec, out.Weight_c_vec, out.Weight_h_vec] = deal(NaN*ones(1, length(out.T_h_vec)-1));
             
-            for i = 1: length(out.V_h_vec)
-                if strcmp(param.type_h,'H')
-                    if strcmp(out.type_zone_h{i},  'tp')
-                             
+            if strcmp(param.type_h,'H')
+                rho_h_liq = CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h);
+                rho_h_vap = CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h);                
+                for i = 1: length(out.V_h_vec)
+                    if strcmp(out.type_zone_h{i},  'tp')                       
                         q_h_1iq = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i),fluid_h);
-                        q_h_vap = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h);
-                        rho_h_liq = CoolProp.PropsSI('D','P',P_h_su,'Q',0,fluid_h);
-                        rho_h_vap = CoolProp.PropsSI('D','P',P_h_su,'Q',1,fluid_h);
+                        q_h_vap = CoolProp.PropsSI('Q','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h);                       
+                        
                         switch param.correlation_h.void_fraction
                             case 'Homogenous'
                                 f_void = @(q) VoidFraction_homogenous(q, rho_h_vap,  rho_h_liq);
-                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
                                 
                             case 'Zivi'
                                 f_void = @(q) VoidFraction_Zivi(q, rho_h_vap,  rho_h_liq);
-                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
                                 
                             case 'Hughmark'
                                 mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
                                 mu_h_vap = CoolProp.PropsSI('V','P',P_h_su,'Q',1,fluid_h);
                                 f_void = @(q) VoidFraction_Hughmark(q, rho_h_vap,  rho_h_liq, mu_h_vap, mu_h_liq, param.Dh_h,  m_dot_h/param.n_canals_h/param.CS_h);
-                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
                                 
                             case 'LockMart'
                                 mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
                                 mu_h_vap = CoolProp.PropsSI('V','P',P_h_su,'Q',1,fluid_h);
                                 f_void = @(q) VoidFraction_Lockhart_Martinelli(q, rho_h_vap,  rho_h_liq, mu_h_vap, mu_h_liq);
-                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
+                                
+                            case 'Premoli'
+                                mu_h_liq = CoolProp.PropsSI('V','P',P_h_su,'Q',0,fluid_h);
+                                sig_h = CoolProp.PropsSI('I','P',P_h_su,'H', 0.5*out.H_h_vec(i)+0.5*out.H_h_vec(i+1),fluid_h);
+                                f_void = @(q) VoidFraction_Premoli(q, rho_h_vap,  rho_h_liq, mu_h_liq, sig_h, param.Dh_h,  m_dot_h/param.n_canals_h/param.CS_h);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
                                 
                             case 'SlipRatio'
                                 f_void = @(q) VoidFraction_SlipRatio(q, rho_h_vap,  rho_h_liq, param.SlipRatio_h);
-                                Weight_h = integral(f_void, q_h_1iq, q_h_vap);
+                                Weight_h = 1/(q_h_vap-q_h_1iq)*integral(f_void, q_h_1iq, q_h_vap);
                         end
-
-                        out.M_h_vec(i) = out.V_h_vec(i)/(q_h_vap-q_h_1iq)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
-                  
+                        out.Weight_h_vec(i) = Weight_h;
+                        out.M_h_vec(i) = out.V_h_vec(i)*(rho_h_liq*Weight_h+ rho_h_vap*(1-Weight_h));
                     else
                         out.M_h_vec(i) = out.V_h_vec(i)*(CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i),fluid_h)+CoolProp.PropsSI('D','P',P_h_su,'H',out.H_h_vec(i+1),fluid_h))/2;
                     end
-                else
+                end
+            else
+                for i = 1: length(out.V_h_vec)                    
                     out.M_h_vec(i) = out.V_h_vec(i)*sf_PropsSI_bar('D', out.T_h_vec(i),  out.T_h_vec(i+1), P_h_su, fluid_h);
                 end
+            end
 
-                if strcmp(param.type_c,'H')
+            if strcmp(param.type_c,'H')
+                rho_c_liq = CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c);
+                rho_c_vap = CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c);
+                
+                for i = 1: length(out.V_c_vec)
+
                     if strcmp(out.type_zone_c{i},  'tp')
                         
                         q_c_1iq = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i),fluid_c);
-                        q_c_vap = CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c);
-                        rho_c_liq = CoolProp.PropsSI('D','P',P_c_su,'Q',0,fluid_c);
-                        rho_c_vap = CoolProp.PropsSI('D','P',P_c_su,'Q',1,fluid_c);
+                        q_c_vap = min(0.9999,CoolProp.PropsSI('Q','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c));
+
                         switch param.correlation_c.void_fraction
                             case 'Homogenous'
                                 f_void = @(q) VoidFraction_homogenous(q, rho_c_vap,  rho_c_liq);
-                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
                                 
                             case 'Zivi'
                                 f_void = @(q) VoidFraction_Zivi(q, rho_c_vap,  rho_c_liq);
-                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
                                 
                             case 'Hughmark'
                                 mu_c_liq = CoolProp.PropsSI('V','P',P_c_su,'Q',0,fluid_c);
                                 mu_c_vap = CoolProp.PropsSI('V','P',P_c_su,'Q',1,fluid_c);
-                                f_void = @(q) VoidFraction_Hughmark(q, rho_c_vap,  rho_c_liq, mu_c_vap, mu_c_liq, param.Dh_c,  m_dot_c/param.n_canals_c/param.CS_c);
-                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
-
+                                f_void = @(q) VoidFraction_Hughmark(q, rho_c_vap,  rho_c_liq, mu_c_vap, mu_c_liq, param.Dh_c,  m_dot_c/param.n_canals_c/param.CS_c);   
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
                             case 'LockMart'
                                 mu_c_liq = CoolProp.PropsSI('V','P',P_c_su,'Q',0,fluid_c);
                                 mu_c_vap = CoolProp.PropsSI('V','P',P_c_su,'Q',1,fluid_c);
                                 f_void = @(q) VoidFraction_Lockhart_Martinelli(q, rho_c_vap,  rho_c_liq, mu_c_vap, mu_c_liq);
-                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
-                                                               
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
+
+                            case 'Premoli'
+                                mu_c_liq = CoolProp.PropsSI('V','P',P_c_su,'Q',0,fluid_c);
+                                sig_c = CoolProp.PropsSI('I','P',P_c_su,'H', 0.5*out.H_c_vec(i)+0.5*out.H_c_vec(i+1),fluid_c);
+                                f_void = @(q) VoidFraction_Premoli(q, rho_c_vap,  rho_c_liq, mu_c_liq, sig_c, param.Dh_c,  m_dot_c/param.n_canals_c/param.CS_c);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
+                                                                                               
                             case 'SlipRatio'
                                 f_void = @(q) VoidFraction_SlipRatio(q, rho_c_vap,  rho_c_liq, param.SlipRatio_c);
-                                Weight_c = integral(f_void, q_c_1iq, q_c_vap);
+                                Weight_c = 1/(q_c_vap-q_c_1iq)*integral(f_void, q_c_1iq, q_c_vap);
                         end
-                        
-                        out.M_c_vec(i) = out.V_c_vec(i)/(q_c_vap-q_c_1iq)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));
-                        
+                        out.Weight_c_vec(i) = Weight_c;
+                        out.M_c_vec(i) = out.V_c_vec(i)*(rho_c_liq*Weight_c+ rho_c_vap*(1-Weight_c));    
+
                     else
                         out.M_c_vec(i) = out.V_c_vec(i)*(CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i),fluid_c)+CoolProp.PropsSI('D','P',P_c_su,'H',out.H_c_vec(i+1),fluid_c))/2;
                     end
-                else
+                end
+            else
+                for i = 1: length(out.V_c_vec)
                     out.M_c_vec(i) = out.V_c_vec(i)*sf_PropsSI_bar('D', out.T_c_vec(i),  out.T_c_vec(i+1), P_c_su, fluid_c);
                 end
             end
-               
+            
             out.M_h = sum(out.M_h_vec);
             out.M_c = sum(out.M_c_vec);
-             
+            out.M_cbis = sum(out.M_cbis_vec);
+
+            %out.A_c_2p = sum(out.A_c(strcmp(out.type_zone_c, 'tp')));
+            %out.V_c_2p = sum(out.V_c_vec(strcmp(out.type_zone_c, 'tp')));
+            %out.M_c_2p = sum(out.M_c_vec(strcmp(out.type_zone_c, 'tp')));
+            %out.Weight_c_2p = sum(out.Weight_c(strcmp(out.type_zone_c, 'tp')));
+ 
+            
             % Flag evaluation 
             if out.resA <1e-4
                 out.flag = 1;
@@ -940,17 +1111,21 @@ out.time = toc(tstart_hex);
 %% TS DIAGRAM and DISPLAY
 
 % Generate the output variable TS
-TS.T_h = out.T_h_vec;
-TS.T_c = out.T_c_vec;
-TS.s_h = out.s_h_vec;
-TS.s_c = out.s_c_vec;
-TS.x = out.x_vec;
-TS.x_geom = [0 cumsum(out.V_h_vec)./param.V_h_tot];
-
+if param.generateTS
+    TS.T_h = out.T_h_vec;
+    TS.T_c = out.T_c_vec;
+    TS.s_h = out.s_h_vec;
+    TS.s_c = out.s_c_vec;
+    TS.x = out.x_vec;
+    TS.x_geom = [0 cumsum(out.V_h_vec)./param.V_h_tot];
+else
+    TS = NaN;
+end
 % If the param.displayTS flag is activated (=1), the temperature profile is
 % plotted in a new figure
 if param.displayTS == 1
     figure
+    %subplot(2,1,1)
     hold on
     plot(TS.x_geom, TS.T_c-273.15,'s-' ,'linewidth',2)
     plot(TS.x_geom, TS.T_h-273.15,'o-' ,'linewidth',2)
@@ -958,6 +1133,16 @@ if param.displayTS == 1
     xlabel('Heat power fraction [-]','fontsize',14,'fontweight','bold')
     ylabel('Temperature [°C]','fontsize',14,'fontweight','bold')
     set(gca,'fontsize',14,'fontweight','bold')
+    
+    %subplot(2,1,2)
+    %hold on
+    %plot(TS.x_geom, cumsum([0 out.V_c_vec]),'s-' ,'linewidth',2)
+    %plot(TS.x_geom(strcmp(out.type_zone_c, 'tp')), out.Weight_c(strcmp(out.type_zone_c, 'tp')),'s-' ,'linewidth',2)
+    %axis([0.25 0.4 0 0.1])
+    %grid on
+    %xlabel('Length [-]','fontsize',14,'fontweight','bold')
+    %ylabel('Mass provile [°C]','fontsize',14,'fontweight','bold')
+    %set(gca,'fontsize',14,'fontweight','bold')
 end
 
 % If the param.displayResults flag is activated (=1), the results are displayed on the
@@ -1073,23 +1258,23 @@ out.A_h_tot = sum(out.A_h);
 out.resA = 1 - out.A_h_tot/info.A_h_tot;
 end
 
-function res = HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info)
+function res = HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v)
 % function giving the residual committed on the HEX surface area for a given Q_dot
-out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info);
+out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v);
 res = out.resA;
 end
 
-function out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info)
-out = HEX_profile_3(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
+function out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v)
+out = HEX_profile_3(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
 [out.hConv_h, out.hConv_c, out.DTlog, out.eff_h, out.eff_c, out.A_h, out.A_c, out.U] = deal(NaN*ones(1,length(out.H_h_vec)-1));
 for j = 1:length(out.T_h_vec)-1
     % Hot side heat transfer coefficient
     if strcmp(info.type_h, 'H')
         if isempty(strfind(fluid_h, 'INCOMP:'))
-            if (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) < CoolProp.PropsSI('H','P',P_h_su,'Q',0,fluid_h)
+            if (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) < h_h_l
                 out.hConv_h(j) = info.hConv_h_liq_n*(m_dot_h/info.m_dot_h_n)^info.n_h_liq;
                 out.type_zone_h{j} = 'liq';
-            elseif (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) > CoolProp.PropsSI('H','P',P_h_su,'Q',1,fluid_h)
+            elseif (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) > h_h_v
                 out.hConv_h(j) = info.hConv_h_vap_n*(m_dot_h/info.m_dot_h_n)^info.n_h_vap;
                 out.type_zone_h{j} = 'vap';
             else
@@ -1108,10 +1293,10 @@ for j = 1:length(out.T_h_vec)-1
     % Cold side heat transfer coefficient
     if strcmp(info.type_c, 'H')
         if isempty(strfind(fluid_c, 'INCOMP:'))
-            if (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) < CoolProp.PropsSI('H','P',P_c_su,'Q',0,fluid_c)
+            if (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) < h_c_l
                 out.hConv_c(j) = info.hConv_c_liq_n*(m_dot_c/info.m_dot_c_n)^info.n_c_liq;
                 out.type_zone_c{j} = 'liq';
-            elseif (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) > CoolProp.PropsSI('H','P',P_c_su,'Q',1,fluid_c)
+            elseif (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) > h_c_v
                 out.hConv_c(j) = info.hConv_c_vap_n*(m_dot_c/info.m_dot_c_n)^info.n_c_vap;
                 out.type_zone_c{j} = 'vap';
             else
@@ -1157,17 +1342,17 @@ out.A_h_tot = sum(out.A_h);
 out.resA = 1 - out.A_h_tot/info.A_h_tot;
 end
 
-function res = HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info)
+function res = HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v)
 % function giving the residual committed on the HEX surface area for a given Q_dot
-out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot), info);
+out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot), info, h_h_l, h_h_v, h_c_l, h_c_v);
 
 res = out.resA;
 
 end
 
-function out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info)
+function out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v)
 
-out = HEX_profile_3(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
+out = HEX_profile_3(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
 [out.A_h, out.A_c, out.hConv_h, out.hConv_c, out.DTlog] = deal(NaN*ones(1,length(out.H_h_vec)-1));
 
 for j = 1:length(out.T_h_vec)-1
@@ -1178,9 +1363,9 @@ for j = 1:length(out.T_h_vec)-1
     % What type of cells for hot side (1phase or 2phase?)    
     if strcmp(info.type_h, 'H')
         if isempty(strfind(fluid_h, 'INCOMP:'))
-            if (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) < CoolProp.PropsSI('H','P',P_h_su,'Q',0,fluid_h)
+            if (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) < h_h_l
                 out.type_zone_h{j} = 'liq';
-            elseif (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) > CoolProp.PropsSI('H','P',P_h_su,'Q',1,fluid_h)
+            elseif (0.5*out.H_h_vec(j)+0.5*out.H_h_vec(j+1)) > h_h_v
                 out.type_zone_h{j} = 'vap';
             else
                 out.type_zone_h{j} = 'tp';
@@ -1195,9 +1380,9 @@ for j = 1:length(out.T_h_vec)-1
     % What type of cells for cold side (1phase or 2phase?)
     if strcmp(info.type_c, 'H')
         if isempty(strfind(fluid_c, 'INCOMP:'))
-            if (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) < CoolProp.PropsSI('H','P',P_c_su,'Q',0,fluid_c)
+            if (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) < h_c_l
                 out.type_zone_c{j} = 'liq';
-            elseif (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) > CoolProp.PropsSI('H','P',P_c_su,'Q',1,fluid_c)
+            elseif (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)) > h_c_v
                 out.type_zone_c{j} = 'vap';
             else
                 out.type_zone_c{j} = 'tp';
@@ -1419,12 +1604,7 @@ for j = 1:length(out.T_h_vec)-1
                 end
                 f_c = (((cos(info.theta))/sqrt(0.045*tan(info.theta) + 0.09*sin(info.theta) + f_0/cos(info.theta)))+((1-cos(info.theta))/(sqrt(3.8*f_90))))^(-0.5);
                 Nu_c = info.fact_corr_sp_c*0.205*(Pr_c^0.33333333)*(f_c*Re_c^2*sin(2*info.theta))^(info.fact2_corr_sp_c*0.374);
-                out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
-%                 out.Re_c(j) = Re_c;
-%                 out.Nu_c(j) = Nu_c;
-%                 out.Pr_c(j) = Pr_c;
-%                 out.k_c(j) = k_c;
-                
+                out.hConv_c(j) = Nu_c*k_c/info.Dh_c;                
                 
             case 'Wanniarachchi'
                 if strcmp(info.type_c, 'H')
@@ -1443,10 +1623,6 @@ for j = 1:length(out.T_h_vec)-1
                 j_Nu_c_l = 3.65*(90-info.theta*180/pi)^(-0.455)*Re_c^(info.fact2_corr_sp_c*-0.339);
                 Nu_c = info.fact_corr_sp_c*(j_Nu_c_l^3 + j_Nu_c_t^3)^(1/3)*Pr_c^(1/3);
                 out.hConv_c(j) = Nu_c*k_c/info.Dh_c;
-%                 out.Re_c(j) = Re_c;
-%                 out.Nu_c(j) = Nu_c;
-%                 out.Pr_c(j) = Pr_c;
-%                 out.k_c(j) = k_c;
                 
             case 'Thonon'
                 if strcmp(info.type_c, 'H')
@@ -1739,57 +1915,57 @@ end
 
 function one_alpha = VoidFraction_Hughmark(q, rho_v, rho_l, mu_v, mu_l, D, G)
 one_alpha = NaN*ones(size(q));
-%options = optimoptions('fsolve', 'display', 'none');
 for i = 1:length(q)    
     q1 = q(i);
-    beta = 1./(1+(((1-q1)./q1).*(rho_v/rho_l)));
-    alpha = beta;
-    res_alpha = 1;
-    k = 0;
-    while res_alpha > 1e-2 && k <= 10
-        k = k + 1;
-        Z = (((D*G)./(mu_l+alpha.*(mu_v-mu_l))).^(1/6)).*(((1/9.81/D)*(G.*q1./(rho_v.*beta.*(1-beta))).^2).^(1/8));
-        ln_Z = log(Z);
-        p1 = -0.010060658854755;
-        p2 = 0.155594796014726;
-        p3 = -0.870912508715887;
-        p4 = 2.167004115373165;
-        p5 = -2.224608445535130;
-        ln_Kh = p1.*ln_Z.^4 + p2.*ln_Z.^3 + p3.*ln_Z.^2 + p4.*ln_Z + p5;
-        Kh = exp(ln_Kh);
-        alpha_new = Kh.*beta;
-        %res_alpha= norm(abs(alpha-alpha_new)./alpha_new);
-        res_alpha = abs(alpha-alpha_new);
-        alpha = min(alpha_new, 1);
-    end
-    %[i res_alpha] 
-    %f = @(x) residualVoidFraction_Hughmark(x,q1, beta, rho_v, mu_v, mu_l, D, G);
-    %alpha = fsolve(f,beta, options);
-    %res_alpha = f(alpha);
-    if res_alpha > 5e-2
-        display('Error in Hughmark void fraction model, residual > 5e-2')
+    beta = 1/(1+(((1-q1)/q1)*(rho_v/rho_l)));   
+    f = @(x) residualVoidFraction_Hughmark(x,q1, beta, rho_v, mu_v, mu_l, D, G);
+    alpha = zeroBrent (0, 1, 1e-8, 1e-8, f );    
+    res_alpha = f(alpha);      
+    if res_alpha > 1e-3
+        display(['Error in Hughmark void fraction model, residual : ' num2str(res_alpha)])
+        disp(['q1 = ' num2str(q1)]);        
+        disp(['beta = ' num2str(beta)]);       
+        disp(['rho_v = ' num2str(rho_v)]);       
+        disp(['mu_v = ' num2str(mu_v)]);        
+        disp(['mu_l = ' num2str(mu_l)]);        
+        disp(['D = ' num2str(D)]);       
+        disp(['G = ' num2str(G)]);
     end
     one_alpha(i) = 1-alpha;
 end
+%figure;
+%hold on
+%plot(q, one_alpha, 'o-')
 end
 
 function res = residualVoidFraction_Hughmark(x,q1, beta, rho_v, mu_v, mu_l, D, G)
-Z = (((D*G)./(mu_l+x.*(mu_v-mu_l))).^(1/6)).*(((1/9.81/D)*(G.*q1./(rho_v.*beta.*(1-beta))).^2).^(1/8));
+Z = (((D*G)/(mu_l+x*(mu_v-mu_l)))^(1/6))*(((1/9.81/D)*(G*q1/(rho_v*beta*(1-beta)))^2)^(1/8));
 ln_Z = log(Z);
 p1 = -0.010060658854755;
 p2 = 0.155594796014726;
 p3 = -0.870912508715887;
 p4 = 2.167004115373165;
 p5 = -2.224608445535130;
-ln_Kh = p1.*ln_Z.^4 + p2.*ln_Z.^3 + p3.*ln_Z.^2 + p4.*ln_Z + p5;
+ln_Kh = p1*ln_Z^4 + p2*ln_Z^3 + p3*ln_Z^2 + p4*ln_Z + p5;
 Kh = exp(ln_Kh);
-alpha_new = Kh.*beta;
-res= abs(x-alpha_new);
+alpha_new = Kh*beta;
+res= (x-alpha_new);
 end
 
 function one_alpha = VoidFraction_Zivi(q, rho_v, rho_l)
 S_zivi = (rho_v/rho_l)^(-1/3);
 alpha = 1./(1+(((1-q)./q).*(rho_v/rho_l)*S_zivi));
+one_alpha = 1-alpha;
+end
+
+function one_alpha = VoidFraction_Premoli(q, rho_v, rho_l, mu_l, sig, D, G)
+Re_f = G*D/mu_l;
+We_f = G^2*D/sig/rho_l;
+y = (rho_l/rho_v)*(q./(1-q));
+F1 = 1.578*(Re_f^-0.19)*(rho_l/rho_v)^0.22;
+F2 = 0.0273*We_f*(Re_f^-0.51)*(rho_l/rho_v)^-0.08;
+S_Premoli = 1+F1*sqrt(max(0,y./(1+y*F2) -y.*F2));
+alpha = 1./(1+(((1-q)./q).*(rho_v/rho_l).*S_Premoli));
 one_alpha = 1-alpha;
 end
 

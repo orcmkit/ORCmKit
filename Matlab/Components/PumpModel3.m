@@ -193,7 +193,7 @@ if out.flag > 0
     out.Q_dot = Q_dot;
     out.epsilon_is = epsilon_is;
     out.epsilon_vol = epsilon_vol;
-    out.M = (CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
+    out.M = (rho_su+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
 else
     out.T_ex = T_su;
     out.h_ex = h_su;
@@ -203,7 +203,7 @@ else
     out.Q_dot = 0;
     out.epsilon_is = 1;
     out.epsilon_vol = 1;
-    out.M =(CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
+    out.M =(rho_su+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
 end
 out.time = toc(tstart_pp);
 

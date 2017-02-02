@@ -130,6 +130,9 @@ if not(isfield(param,'displayResults'))
     %if nothing specified by the user, the results are not displayed by
     %default.
 end
+if not(isfield(param,'generateTS'))
+    param.generateTS = 0;
+end
 
 if not(isfield(param,'h_min'))
     param.h_min =  CoolProp.PropsSI('H','P',5e4,'T',253.15,fluid);
@@ -223,14 +226,14 @@ if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
             x0 = 0.85*T_su+0.15*T_amb; %initial value for T_wall
             ub = 2*x0; 
             options = optimset('Display','off');
-            [x, ~, flag] = fsolve(@(x)  FCT_Exp2_SemiEmp_res(x, ub, fluid, P_su, h_su, M_dot, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param), x0./ub, options);
+            [x, ~, flag] = fsolve(@(x)  FCT_Exp2_SemiEmp_res(x, ub, fluid, P_su, h_su, M_dot, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param, s_su, rho_su, h_ex_s), x0./ub, options);
             x = x.*ub;
-            int = FCT_Exp2_SemiEmp(x,fluid, P_su, h_su, M_dot, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param);
+            int = FCT_Exp2_SemiEmp(x,fluid, P_su, h_su, M_dot, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param, s_su, rho_su, h_ex_s);
             N_exp = int.N_exp;
             W_dot = int.W_dot;
             h_ex = int.h_ex;
             epsilon_is = int.epsilon_is;
-            FF = M_dot/(param.V_s*int.N_exp/60*CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid));
+            FF = M_dot/(param.V_s*int.N_exp/60*rho_su);
             Q_dot_amb = int.Q_dot_amb;
             if  all(abs(int.res) < 1e-4) && h_ex > param.h_min && h_ex < param.h_max
                 out.flag = flag;
@@ -253,7 +256,7 @@ if out.flag > 0;
     out.epsilon_is = epsilon_is;
     out.FF = FF;
     out.T_ex = CoolProp.PropsSI('T','P',P_ex,'H',out.h_ex,fluid);
-    out.M = (CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;   
+    out.M = (rho_su+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;   
 
 else    
     out.N_exp = 60*M_dot/(param.V_s*rho_su);
@@ -263,7 +266,7 @@ else
     out.Q_dot_amb = 0;
     out.h_ex = h_ex_s;
     out.T_ex = CoolProp.PropsSI('T','P',P_ex,'H',out.h_ex,fluid);
-    out.M = (CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
+    out.M = (rho_su+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;
 end
 
 if out.flag <=0 && param.displayResults == 1
@@ -274,11 +277,15 @@ out.time = toc(tstart_exp);
 %% TS DIAGRAM and DISPLAY
 
 % Generate the output variable TS 
-s_su = CoolProp.PropsSI('S','H',h_su,'P',P_su, fluid);
-s_ex = CoolProp.PropsSI('S','H', out.h_ex,'P', P_ex, fluid);
-TS.T = [T_su out.T_ex];
-TS.s = [s_su s_ex];
-
+if param.generateTS
+    s_su = CoolProp.PropsSI('S','H',h_su,'P',P_su, fluid);
+    s_ex = CoolProp.PropsSI('S','H', out.h_ex,'P', P_ex, fluid);
+    TS.T = [T_su out.T_ex];
+    TS.s = [s_su s_ex];
+else
+    TS.T = NaN;
+    TS.s = NaN;
+end
 % If the param.displayResults flag is activated (=1), the results are 
 % displayed on the command window
 if param.displayResults ==1
@@ -310,16 +317,14 @@ end
 end
 
 %% NESTED FUNCTIONS
-function res = FCT_Exp2_SemiEmp_res(x, ub, fluid, P_su, h_su, M_dot, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, param)
+function res = FCT_Exp2_SemiEmp_res(x, ub, fluid, P_su, h_su, M_dot, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, param, s_su, rho_su, h_ex_s)
 T_w = x.*ub;
-out = FCT_Exp2_SemiEmp(T_w, fluid, P_su, h_su, M_dot, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, param);
+out = FCT_Exp2_SemiEmp(T_w, fluid, P_su, h_su, M_dot, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, param, s_su, rho_su, h_ex_s);
 res = out.res;
 end
 
-function out = FCT_Exp2_SemiEmp(T_w, fluid, P_su, h_su, M_dot, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, param)
-s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
-rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
-out.h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
+function out = FCT_Exp2_SemiEmp(T_w, fluid, P_su, h_su, M_dot, V_s, r_v_in, P_ex, A_leak0, d_su, alpha, W_dot_loss_0, AU_su_n, M_dot_n, AU_ex_n, AU_amb, T_amb, C_loss, param, s_su, rho_su, h_ex_s)
+out.h_ex_s = h_ex_s;
 AU_su1 = AU_su_n*(M_dot/M_dot_n)^0.8;
 AU_ex1 = AU_ex_n*(M_dot/M_dot_n)^0.8;
 out.h_su1 = h_su;

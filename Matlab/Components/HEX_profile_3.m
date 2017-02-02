@@ -1,4 +1,4 @@
-function out = HEX_profile_3(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, param)
+function out = HEX_profile_3(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, param, h_h_l, h_h_v, h_c_l, h_c_v)
 
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
@@ -53,10 +53,7 @@ if strcmp(param.type_h,'H') && strcmp(param.type_c,'H')  %% CASE 1 : HOT FLUID A
     if not(isempty(strfind(fluid_h, 'INCOMP:')))
         h_h_l = h_h_su*3;
         h_h_v = h_h_su*3;
-    else
-        h_h_l = CoolProp.PropsSI('H','P',P_h_su,'Q',0, fluid_h);
-        h_h_v = CoolProp.PropsSI('H','P',P_h_su,'Q',1, fluid_h);
-    end 
+    end
     if round(h_h_v,decim) < round(h_h_ex,decim) 
         H_h_vec = [h_h_ex  h_h_su]; %if vapour-phase only
     elseif round(h_h_l,decim) > round(h_h_su,decim)
@@ -89,9 +86,6 @@ if strcmp(param.type_h,'H') && strcmp(param.type_c,'H')  %% CASE 1 : HOT FLUID A
     if not(isempty(strfind(fluid_c, 'INCOMP:')))
         h_c_l = h_c_ex*3;
         h_c_v = h_c_ex*3;
-    else
-        h_c_l = CoolProp.PropsSI('H','P',P_c_su,'Q',0, fluid_c);
-        h_c_v = CoolProp.PropsSI('H','P',P_c_su,'Q',1, fluid_c);
     end
     if round(h_c_v,decim) < round(h_c_su,decim)
         H_c_vec = [h_c_su  h_c_ex]; % if vapour only
@@ -142,7 +136,7 @@ if strcmp(param.type_h,'H') && strcmp(param.type_c,'H')  %% CASE 1 : HOT FLUID A
     out.T_c_vec = NaN*ones(1,length(H_c_vec));
     for k = 1:length(H_c_vec)
         out.T_h_vec(k) = CoolProp.PropsSI('T','P', P_h_su, 'H', H_h_vec(k), fluid_h);
-        out.T_c_vec(k) = CoolProp.PropsSI('T','P', P_c_su, 'H', H_c_vec(k), fluid_c);        
+        out.T_c_vec(k) = CoolProp.PropsSI('T','P', P_c_su, 'H', H_c_vec(k), fluid_c);
     end
     out.DT_vec = out.T_h_vec-out.T_c_vec;
     out.pinch = min(out.T_h_vec-out.T_c_vec);
@@ -154,9 +148,6 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'H') %% CASE 2 : HOT FLUI
     if not(isempty(strfind(fluid_c, 'INCOMP:')))
         h_c_l = h_c_ex*3;
         h_c_v = h_c_ex*3;
-    else
-        h_c_l = CoolProp.PropsSI('H','P',P_c_su,'Q',0, fluid_c);
-        h_c_v = CoolProp.PropsSI('H','P',P_c_su,'Q',1, fluid_c);
     end
     
     if round(h_c_v,decim) < round(h_c_su,decim)
@@ -207,7 +198,7 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'H') %% CASE 2 : HOT FLUI
     out.T_h_vec = T_h_vec;
     out.T_c_vec = NaN*ones(1,length(H_c_vec));
     for k = 1:length(H_c_vec)
-        out.T_c_vec(k) = CoolProp.PropsSI('T','P', P_c_su, 'H', H_c_vec(k), fluid_c);        
+        out.T_c_vec(k) = CoolProp.PropsSI('T','P', P_c_su, 'H', H_c_vec(k), fluid_c);
     end
     out.DT_vec = out.T_h_vec-out.T_c_vec;
     out.pinch = min(out.T_h_vec-out.T_c_vec);
@@ -219,10 +210,7 @@ elseif strcmp(param.type_h,'H') && strcmp(param.type_c,'T')  %% CASE 3 : HOT FLU
     if not(isempty(strfind(fluid_h, 'INCOMP:')))
         h_h_l = h_h_su*3;
         h_h_v = h_h_su*3;
-    else
-        h_h_l = CoolProp.PropsSI('H','P',P_h_su,'Q',0, fluid_h);
-        h_h_v = CoolProp.PropsSI('H','P',P_h_su,'Q',1, fluid_h);
-    end 
+    end
     if round(h_h_v,decim) < round(h_h_ex,decim)
         H_h_vec = [h_h_ex  h_h_su];
     elseif round(h_h_l,decim) > round(h_h_su,decim)
@@ -267,7 +255,7 @@ elseif strcmp(param.type_h,'H') && strcmp(param.type_c,'T')  %% CASE 3 : HOT FLU
     out.T_c_vec = T_c_vec;
     out.T_h_vec = NaN*ones(1,length(H_h_vec));
     for k = 1:length(H_h_vec)
-        out.T_h_vec(k) = CoolProp.PropsSI('T','P', P_h_su, 'H', H_h_vec(k), fluid_h);        
+        out.T_h_vec(k) = CoolProp.PropsSI('T','P', P_h_su, 'H', H_h_vec(k), fluid_h);
     end
     out.DT_vec = out.T_h_vec-out.T_c_vec;
     out.pinch = min(out.T_h_vec-out.T_c_vec);
