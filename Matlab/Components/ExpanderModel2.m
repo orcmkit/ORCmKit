@@ -76,12 +76,12 @@ function [out,TS] = ExpanderModel2(fluid, P_su, h_su, M_dot, P_ex, T_amb, param)
 if nargin == 0
     
     % Define a demonstration case if ExpanderModel.mat is not executed externally
-    fluid = 'R245fa';                           %Nature of the fluid
+    fluid = 'R134a';                           %Nature of the fluid
     M_dot = 0.15982;                            %Mass flow rate         [kg/s]
-    P_su = 6.753498330038136e+05;               %Supply pressure        [Pa]
-    h_su = 4.052843743508205e+05;               %Supply enthalpy        [J/kg]
+    P_su = 50.753498330038136e+05;               %Supply pressure        [Pa]
+    h_su = CoolProp.PropsSI('H','P',P_su,'T',273.15+200,fluid);               %Supply enthalpy        [J/kg]
     P_ex = 2.471310061849047e+05;               %Exhaust pressure       [Pa]
-    T_amb = 298.1500;              %Ambient temperature    [K]
+    T_amb = 298.1500;                           %Ambient temperature    [K]
     param.displayResults = 1;                   %Flag to control the resustl display [0/1]
     param.modelType = 'SemiEmp';                %Type of model          [CstEff, PolEff, SemiEmp]
     param.gamma = 0.8;
@@ -146,7 +146,7 @@ s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
 rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
 h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
 
-if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
+if P_su > P_ex %&& h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
     %If the external conditions are viable (i.e. pressure ratio higher than
     %1 and in two phase conditions), we proceed to the modeling:
              
@@ -338,7 +338,13 @@ end
 out.epsilon_su1 = max(0,(1-exp(-AU_su1/(M_dot*out.cp_su1))));
 out.DP_su = P_su-out.P_su1;
 out.Q_dot_su = max(0,out.epsilon_su1*M_dot*out.cp_su1*(out.T_su1 - T_w));
-out.h_su2 = min(param.h_max,max(max(out.h_ex_s, CoolProp.PropsSI('H','Q',0.1,'P',out.P_su1,fluid)),out.h_su1 - out.Q_dot_su/M_dot));
+if out.P_su1< CoolProp.PropsSI('Pcrit','Q',0.1,'P',out.P_su1,fluid)
+    h_su2_min = CoolProp.PropsSI('H','Q',0.1,'P',out.P_su1,fluid);
+else
+    h_su2_min = NaN;
+end
+out.h_su2 = min(param.h_max,max(max(out.h_ex_s, h_su2_min),out.h_su1 - out.Q_dot_su/M_dot));
+%out.h_su2 = min(param.h_max,max(max(out.h_ex_s, -inf),out.h_su1 - out.Q_dot_su/M_dot));
 out.s_su2 = CoolProp.PropsSI('S','H',out.h_su2,'P',out.P_su1,fluid);
 out.rho_su2 = CoolProp.PropsSI('D','H',out.h_su2,'P',out.P_su1,fluid);
 out.q_su2 = CoolProp.PropsSI('Q','P',out.P_su1,'H',out.h_su2,fluid);

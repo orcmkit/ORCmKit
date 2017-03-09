@@ -65,14 +65,14 @@ function [out,TS] = PumpModel3(P_su, h_su, P_ex, fluid, N_pp, T_amb, param)
 if nargin == 0
     
     % Define a demonstration case if PumpModel.mat is not executed externally
-    fluid = 'R245fa';               %Nature of the fluid
+    fluid = 'R134a';               %Nature of the fluid
     P_su = 4.0001e5;                %Supply pressure        [Pa]
-    P_ex = 3.6510e+06*0.99;         %Exhaust pressure       [Pa]
+    P_ex = 3.6510e+06*3;         %Exhaust pressure       [Pa]
     h_su = 2.6676e+05;              %Supply enthalpy        [J/kg]
     N_pp = 1500;                    %Rotational speed       [rpm]
-    param.modelType = 'CstEff';     %Type of model          [CstEff, PolEff, SemiEmp]
+    param.modelType = 'SemiEmp';    %Type of model          [CstEff, PolEff, SemiEmp]
     param.displayResults = 1;       %Flag to control the resustl display [0/1]
-    
+    T_amb = 298;
     switch param.modelType
         case 'CstEff'
             param.V_s = 1e-6;               %Machine swepts volume  [m^3]
@@ -88,7 +88,10 @@ if nargin == 0
         case 'SemiEmp'
             param.V_s = 1e-6;               %Machine swepts volume  [m^3]
             param.V =1.4e-3;                %Volume inside the pump
-
+            param.A_leak = 1e-7;
+            param.W_dot_0_loss = 200;
+            param.K_0_loss  = 0.2;
+            param.AU = 1;
     end
 end
 

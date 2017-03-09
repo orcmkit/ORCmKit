@@ -138,19 +138,36 @@ else
 end
 
 %% ORC MODELING
+if not(isfield(param, 'display_list'))
+    param.display_list = param.display;
+end
 
 % Initial conditions evaluation
 IC = InitialConditions_ORC_Ext_Npp_Nexp_3(fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
 if max(param.init) <2
-    if length(IC.res) < 1 || min(IC.res) > 1
-        out_ORC.flag_ORC = - 1;
+    if length(IC.res) < 1 %|| min(IC.res) > 2
+        out_ORC.flag_ORC = - 3;
+        out_ORC.res = NaN;
+        out_ORC.res_ORC_M = NaN;
+        out_ORC.res_vec = NaN;
         TS_ORC = NaN;
         return
     end
 end
 
 % Order guesses results
-[res_ordered, j_order] = sort(IC.res);
+[~, j_order] = sort(IC.res);
+
+%tuned now
+if length(IC.res) > param.nbr_test
+    nbr_sort_kept = min(2,length(j_order)-1);
+    vec_sort_kept = 1:nbr_sort_kept;
+    vec_sort_mixt = (nbr_sort_kept+1):length(j_order);
+    j_order = [j_order(vec_sort_kept) j_order(vec_sort_mixt(randperm(length(vec_sort_mixt))) )];
+end
+
+res_ordered = IC.res(j_order);
+
 Nbr_comb_x0 = length(j_order);
 Nbr_comb_x0_max = param.nbr_test;
 if param.display
@@ -167,22 +184,23 @@ if not(isempty(res_ordered))
         fprintf('\n');
         disp('Start iteration:')
         fprintf('\n');
-        fprintf('%-10s %-5s %-60s %-15s %-60s %-60s %-10s %-100s\n', '#', 'i0', 'x_in', 'res_in', 'x_out', 'res_out', 'flag_ORC', 'flag components');
+        fprintf('%-15s %-10s %-5s %-50s %-15s %-50s %-60s %-15s %-10s %-100s\n', 'DT_sc', '#', 'i0', 'x_in', 'res_in', 'x_out', 'res_out', 'res_M', 'flag_ORC', 'flag components');
         fprintf('\n');
     end
     k = 1;
     out_ORC_best.res = 1e10;
     stop = 0;
     options_fmincon = optimset('Disp',param.displayIter,'Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
-    
+    %options_pattsearch = psoptimset('Display','iter','TolX', 1e-8, 'TolFun', 1e-8, 'TolMesh', 1e-8, 'MaxIter', 1e4, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
+
     while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
         
         x0 = [IC.P_pp_ex_guess_vec(j_order(k))    IC.P_pp_su_guess_vec(j_order(k))    IC.h_ev_ex_guess_vec(j_order(k))];
         ub = [IC.P_pp_ex_ub_vec(j_order(k))       IC.P_pp_su_ub_vec(j_order(k))       IC.h_ev_ex_ub_vec(j_order(k))];
         lb = [IC.P_pp_ex_lb_vec(j_order(k))       IC.P_pp_su_lb_vec(j_order(k))       IC.h_ev_ex_lb_vec(j_order(k))];
         A_ineq = [-1 1.001 0]; B_ineq = [0];
-        if param.display
-            fprintf('%-10s %-5d %-60s %-15s ', [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(IC.res(j_order(k)), '%.4g'));
+        if param.display_list
+            fprintf('%-15s %-10s %-5d %-50s %-15s ', num2str(param.DT_sc,'%15.5e'), [num2str(k) '/' num2str(min(Nbr_comb_x0,Nbr_comb_x0_max))] , j_order(k), ['[' num2str(x0,'%15.4e') ']'] , num2str(IC.res(j_order(k)), '%.4g'));
         end
         param.eval_type = 'fast';
         param.EV.generateTS = 0;
@@ -191,6 +209,7 @@ if not(isempty(res_ordered))
         param.EXP.generateTS = 0;
         f = @(x) FCT_ORC_Ext_Npp_Nexp_res_3( x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param);
         x = fmincon(f,x0./ub,A_ineq,B_ineq,[],[],lb./ub,ub./ub,[],options_fmincon);
+        %[x, ~, ~,  ] = patternsearch(f,x0./ub,[],[],[],[],lb./ub,ub./ub,[],options_pattsearch);
         param.eval_type = 'long';
         param.EV.generateTS = 1;
         param.CD.generateTS = 1;
@@ -209,8 +228,8 @@ if not(isempty(res_ordered))
             out_ORC.flag_ORC = 1;
             stop = 1;
         end
-        if param.display
-            fprintf('%-60s %-60s %-10s %-100s \n', ['[' num2str(x.*ub,'%15.4e') ']'], [ num2str(out_ORC.res, '%.4g') '  [ ' num2str(out_ORC.res_vec,'%15.4e') ' ] '], num2str(out_ORC.flag_ORC), num2str(out_ORC.flag.value));
+        if param.display_list
+            fprintf('%-50s %-60s %-15s %-10s %-100s \n', ['[' num2str(x.*ub,'%15.4e') ']'], [ num2str(out_ORC.res, '%.4g') '  [ ' num2str(out_ORC.res_vec,'%15.4e') ' ] '], num2str(out_ORC.res_ORC_M,'%15.5e'), num2str(out_ORC.flag_ORC), num2str(out_ORC.flag.value));
         end
         if out_ORC.res < out_ORC_best.res
             out_ORC_best = out_ORC;

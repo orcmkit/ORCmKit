@@ -1,4 +1,4 @@
-function [out, TS] = FCT_ORC_Ext_Npp_Nexp_3(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
+function [out, TS] = FCT_ORC_Ext_Npp_Nexp_4(x, lb, ub, fluid_wf, fluid_htf, in_htf_su, T_htf_su, P_htf_su, m_dot_htf, fluid_ctf, in_ctf_su, T_ctf_su, P_ctf_su, m_dot_ctf, T_amb, N_exp, N_pp, param)
 
 % Impose :   All external conditions, N_exp, N_pp, either DT_sc or M_tot
 % Guess :    P_pp_ex, P_pp_su, h_ev_ex (and h_pp_su if M_tot is imposed)
@@ -17,13 +17,7 @@ i_mass = 1;
 % PUMP ---------------------------------------------------------------------------
 % --------------------------------------------------------------------------------
 out.P_pp_su = x(2);
-%out.T_pp_su = CoolProp.PropsSI('T', 'P', out.P_pp_su, 'Q', 0, fluid_wf) - param.DT_sc;
-% if param.DT_sc ~= 0
-%     out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'T', out.T_pp_su, fluid_wf);
-% else
-%     out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
-% end
-% out.DT_sc = param.DT_sc;
+
 if param.DT_sc == 0
     out.h_pp_su = CoolProp.PropsSI('H', 'P', out.P_pp_su, 'Q', 0, fluid_wf);
     out.DT_sc = param.DT_sc;
@@ -132,7 +126,7 @@ out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
 % --------------------------------------------------------------------------------
 param.REC.port_h = 'su';
 param.REC.port_c = 'su';
-[out_REC, TS_REC] = HexModel(fluid_wf, out.P_rech_su, out.h_rech_su, out.m_dot_wf, fluid_wf, out.P_recc_su, out.h_recc_su, out.m_dot_wf, param.REC);
+[out_REC, TS_REC] = HexModel_supcrit(fluid_wf, out.P_rech_su, out.h_rech_su, out.m_dot_wf, fluid_wf, out.P_recc_su, out.h_recc_su, out.m_dot_wf, param.REC);
 out.Q_dot_rec = out_REC.Q_dot_tot;
 out.M_rech = out_REC.M_h;
 out.M_recc = out_REC.M_c;

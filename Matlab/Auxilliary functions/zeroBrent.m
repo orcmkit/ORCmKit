@@ -60,8 +60,18 @@ function value = zeroBrent ( a, b, machep, t, f )
   sa = a;
   sb = b;
   fa = f ( sa );
+  
+  if fa == 0 %addon Rémi DICKES 07/02/2017
+      value = sa; %addon Rémi DICKES 07/02/2017
+      return %addon Rémi DICKES 07/02/2017
+  end %addon Rémi DICKES 07/02/2017
+  
   fb = f ( sb );
-
+  if fb == 0 %addon Rémi DICKES 07/02/2017
+      value = sb; %addon Rémi DICKES 07/02/2017
+      return %addon Rémi DICKES 07/02/2017
+  end %addon Rémi DICKES 07/02/2017
+  
   c = sa;
   fc = fa;
   e = sb - sa;
