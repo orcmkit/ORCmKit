@@ -126,10 +126,10 @@ out.Mass.name{1,i_mass} = 'M_aux_exp_ex';
 % --------------------------------------------------------------------------------
 param.REC.port_h = 'su';
 param.REC.port_c = 'su';
-[out_REC, TS_REC] = HexModel_supcrit(fluid_wf, out.P_rech_su, out.h_rech_su, out.m_dot_wf, fluid_wf, out.P_recc_su, out.h_recc_su, out.m_dot_wf, param.REC);
+[out_REC, TS_REC] = HexModel2(fluid_wf, out.P_rech_su, out.h_rech_su, out.m_dot_wf, fluid_wf, out.P_recc_su, out.h_recc_su, out.m_dot_wf, param.REC);
 out.Q_dot_rec = out_REC.Q_dot_tot;
-out.M_rech = out_REC.M_h;
-out.M_recc = out_REC.M_c;
+out.M_rech = out_REC.H.M_tot;
+out.M_recc = out_REC.C.M_tot;
 out.flag_rec = out_REC.flag;
 out.time_rec = out_EXP.time;
 out.pinch_rec = out_REC.pinch;
@@ -142,12 +142,12 @@ out.Mass.name{1,i_mass} = 'M_recc';
 i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out.M_rech;
 out.Mass.name{1,i_mass} = 'M_rech';
-out.h_cd_su = out_REC.h_h_ex;
+out.h_cd_su = out_REC.H.h_ex;
 out.P_cd_su = out.P_rech_su;
-out.T_cd_su = out_REC.T_h_ex;    
-out.h_ev_su = out_REC.h_c_ex;
+out.T_cd_su = out_REC.H.T_ex;    
+out.h_ev_su = out_REC.C.h_ex;
 out.P_ev_su = out.P_recc_su;
-out.T_ev_su = out_REC.T_c_ex;
+out.T_ev_su = out_REC.C.T_ex;
 
 i_mass = i_mass + 1;
 out.Mass.value(1,i_mass) = param.V_aux_rech_ex*CoolProp.PropsSI('D','H',out.h_cd_su,'P',out.P_cd_su,fluid_wf);
@@ -161,11 +161,11 @@ out.Mass.name{1,i_mass} = 'M_aux_recc_ex';
 % --------------------------------------------------------------------------------
 param.EV.port_h = 'su';
 param.EV.port_c = 'su';
-[out_EV, TS_EV] = HexModel(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_ev_su, out.h_ev_su, out.m_dot_wf , param.EV);
+[out_EV, TS_EV] = HexModel2(fluid_htf, P_htf_su, in_htf_su, m_dot_htf, fluid_wf, out.P_ev_su, out.h_ev_su, out.m_dot_wf , param.EV);
 out.Q_dot_ev = out_EV.Q_dot_tot;
-out.T_htf_ev_ex = out_EV.T_h_ex;
-out.h_htf_ev_ex = out_EV.h_h_ex;
-out.M_ev = out_EV.M_c;
+out.T_htf_ev_ex = out_EV.H.T_ex;
+out.h_htf_ev_ex = out_EV.H.h_ex;
+out.M_ev = out_EV.C.M_tot;
 out.flag_ev = out_EV.flag;
 out.time_ev = out_EV.time;
 out.pinch_ev = out_EV.pinch;
@@ -175,8 +175,8 @@ out.flag.name{1,i_flag} = 'flag_ev';
 i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out.M_ev;
 out.Mass.name{1,i_mass} = 'M_ev';
-out.h_ev_ex = out_EV.h_c_ex;
-out.T_ev_ex = out_EV.T_c_ex;
+out.h_ev_ex = out_EV.C.h_ex;
+out.T_ev_ex = out_EV.C.T_ex;
 out.P_ev_ex = out.P_ev_su;
 
 
@@ -185,11 +185,11 @@ out.P_ev_ex = out.P_ev_su;
 % --------------------------------------------------------------------------------
 param.CD.port_h = 'su';
 param.CD.port_c = 'su';
-[out_CD, TS_CD] = HexModel(fluid_wf, out.P_cd_su, out.h_cd_su, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
+[out_CD, TS_CD] = HexModel2(fluid_wf, out.P_cd_su, out.h_cd_su, out.m_dot_wf, fluid_ctf, P_ctf_su, in_ctf_su, m_dot_ctf , param.CD);
 out.Q_dot_cd = out_CD.Q_dot_tot;
-out.T_ctf_cd_ex = out_CD.T_c_ex;
-out.h_ctf_cd_ex = out_CD.h_c_ex;
-out.M_cd = out_CD.M_h;
+out.T_ctf_cd_ex = out_CD.C.T_ex;
+out.h_ctf_cd_ex = out_CD.C.h_ex;
+out.M_cd = out_CD.H.M_tot;
 out.flag_cd = out_CD.flag;
 out.time_cd = out_CD.time;
 out.pinch_cd = out_CD.pinch; 
@@ -201,15 +201,15 @@ i_mass = i_mass+1;
 out.Mass.value(1,i_mass) = out.M_cd;
 out.Mass.name{1,i_mass} = 'M_cd';
 out.P_cd_ex = out.P_cd_su;
-out.T_cd_ex = out_CD.T_h_ex;
-out.h_cd_ex = out_CD.h_h_ex;
+out.T_cd_ex = out_CD.H.T_ex;
+out.h_cd_ex = out_CD.H.h_ex;
 
 i_mass = i_mass + 1;
 out.Mass.value(1,i_mass) = param.V_aux_cd_ex*CoolProp.PropsSI('D','H',out.h_cd_ex,'P',out.P_cd_ex,fluid_wf);
 out.Mass.name{1,i_mass} = 'M_aux_cd_ex';
 
-out.M_cd_vec = out_CD.M_h_vec;
-out.V_cd_vec = out_CD.V_h_vec;
+%out.M_cd_vec = out_CD.H.M_vec;
+%out.V_cd_vec = out_CD.H.V_vec;
 
 % --------------------------------------------------------------------------------
 % LIQUID RECEIVER-----------------------------------------------------------------

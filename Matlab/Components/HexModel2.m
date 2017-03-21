@@ -135,12 +135,12 @@ if nargin == 0
     % Define a demonstration case if HexModel.mat is not executed externally  
     
     fluid_h = 'water';                                               % Nature of the hot fluid           [-]
-    m_dot_h = 0.09;                                                          % Mass flow rat of the hot fluid    [kg/s]
+    m_dot_h = 7.69;                                                          % Mass flow rat of the hot fluid    [kg/s]
     P_h_su =  25e+05;                                                        % Supply pressure of the hot fluid  [Pa]
     in_h_su = CoolProp.PropsSI('H','P',P_h_su,'T',160+273.15, fluid_h);                                                    % Supply h or T of the hot fluid  	[J/kg pr K]
     fluid_c = 'R134a';                                                     % Nature of the cold fluid        	[-]
-    m_dot_c = 0.0252;                                                      % Mass flow rat of the cold fluid  	[kg/s]
-    P_c_su = 45.188e5;                                                           % Supply pressure of the cold fluid	[Pa]
+    m_dot_c = 0.0152;                                                      % Mass flow rat of the cold fluid  	[kg/s]
+    P_c_su = 50.188e5;                                                           % Supply pressure of the cold fluid	[Pa]
     in_c_su = CoolProp.PropsSI('H','P',P_c_su,'T',50+273.15, fluid_c);      % Supply h or T of the cold fluid  	[J/kg pr K]
     
     if 0
@@ -189,7 +189,8 @@ if nargin == 0
     param.H.n_canals = Nc_sf_ev;
 
     param.n_tp_disc = 2;
-    param.modelType = 'hConvVar';
+    param.n_supcrit_disc = 20;
+    param.modelType = 'hConvCor';
     param.H.type = 'H';
     param.C.type = 'H';
     param.H.m_dot_n = 1;
@@ -232,10 +233,16 @@ if nargin == 0
     param.H.fact2_corr_2p = 1;
     param.C.fact2_corr_sp = 1;
     param.C.fact2_corr_2p = 1;  
-    param.displayResults = 0;
+    param.displayResults = 1;
     param.displayTS = 1;
     param.generateTS = 1;
-
+    
+    load([cd '\FluidProperties\T_supcritical_' fluid_c '.mat'])
+    param.C.supcrit.fit_T_l_limit = eval(['fit_T_pseudo_l_limit_' fluid_c]);
+    param.C.supcrit.fit_T_v_limit = eval(['fit_T_pseudo_v_limit_' fluid_c]);
+    load([cd '\FluidProperties\T_supcritical_' fluid_h '.mat'])
+    param.H.supcrit.fit_T_l_limit = eval(['fit_T_pseudo_l_limit_' fluid_h]);
+    param.H.supcrit.fit_T_v_limit = eval(['fit_T_pseudo_v_limit_' fluid_h]);    
     % For another example of implementation, please load the .mat file
     % "HEX_param_examples" and select the desired modelling approach
 
@@ -255,21 +262,21 @@ end
 
 
 % Evaluation of the hot fluid (HF) supply conditions
+param.n_disc = param.n_tp_disc;
 if strcmp(param.H.type,'H')
     T_h_su = CoolProp.PropsSI('T','P',P_h_su,'H',in_h_su, fluid_h);
     P_h_crit = CoolProp.PropsSI('Pcrit','P',P_h_su,'Q',0,fluid_h);
-    h_h_crit = CoolProp.PropsSI('H','P',P_h_su,'T',CoolProp.PropsSI('Tcrit','P',P_h_su,'Q',0,fluid_h)-0.01,fluid_h);
     if P_h_su < P_h_crit
         h_h_l = CoolProp.PropsSI('H','P',P_h_su,'Q',0,fluid_h);
         h_h_v = CoolProp.PropsSI('H','P',P_h_su,'Q',1,fluid_h);
     else
-        h_h_l = NaN;
-        h_h_v = NaN;
+        h_h_l = CoolProp.PropsSI('H','P',P_h_su,'T',param.H.supcrit.fit_T_l_limit(P_h_su) ,fluid_h);
+        h_h_v = CoolProp.PropsSI('H','P',P_h_su,'T',param.H.supcrit.fit_T_v_limit(P_h_su) ,fluid_h);
+        param.n_disc = param.n_supcrit_disc;
     end
 elseif strcmp(param.H.type,'T')
     T_h_su = in_h_su;
     P_h_crit = NaN;
-    h_h_crit = NaN;
     h_h_l = NaN;
     h_h_v = NaN;
 end
@@ -278,18 +285,17 @@ end
 if strcmp(param.C.type,'H')
     T_c_su = CoolProp.PropsSI('T','P',P_c_su,'H',in_c_su, fluid_c);
     P_c_crit = CoolProp.PropsSI('Pcrit','P',P_c_su,'Q',0,fluid_c);
-    h_c_crit = CoolProp.PropsSI('H','P',P_c_su,'T',CoolProp.PropsSI('Tcrit','P',P_c_su,'Q',0,fluid_c)-0.01,fluid_c);
     if P_c_su < P_c_crit
         h_c_l = CoolProp.PropsSI('H','P',P_c_su,'Q', 0, fluid_c);
         h_c_v = CoolProp.PropsSI('H','P',P_c_su,'Q', 1, fluid_c);
     else
-        h_c_l = NaN;
-        h_c_v = NaN;
+        param.n_disc = param.n_supcrit_disc;
+        h_c_l = CoolProp.PropsSI('H','P',P_c_su,'T',param.C.supcrit.fit_T_l_limit(P_c_su) ,fluid_c);
+        h_c_v = CoolProp.PropsSI('H','P',P_c_su,'T',param.C.supcrit.fit_T_v_limit(P_c_su) ,fluid_c);
     end
 elseif strcmp(param.C.type,'T')
     T_c_su = in_c_su;
     P_c_crit = NaN;
-    h_c_crit = NaN;
     h_c_l = NaN;
     h_c_v = NaN;
 end
@@ -317,9 +323,9 @@ if T_h_su<T_c_su
 %          [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, param.m_dot_h_n, param.hConv_h_liq_n, param.hConv_h_tp_n, param.hConv_h_vap_n, param.type_h, param.A_h_tot, param.V_h_tot, h_h_l, h_h_v] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, h_c_l, h_c_v);
 %         [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, param.m_dot_c_n, param.hConv_c_liq_n, param.hConv_c_tp_n, param.hConv_c_vap_n, param.type_c, param.A_c_tot, param.V_c_tot, h_c_l, h_c_v] = deal(fluid_h_int, P_h_int_su, in_h_int_su, m_dot_h_int, T_h_int_su, m_dot_h_int_n, hConv_h_int_liq_n, hConv_h_int_tp_n, hConv_h_int_vap_n, type_h_int, A_h_int_tot, V_h_int_tot, h_h_l_int, h_h_v_int);
         param2 = rmfield(param, {'H', 'C'});       
-        [fluid_h_int, P_h_su_int, in_h_su_int, m_dot_h_int, T_h_su_int, h_h_l_int, h_h_v_int, P_h_crit_int, h_h_crit_int, H_int] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, h_h_l, h_h_v, P_h_crit, h_h_crit, param.H);        
-        [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, h_h_l, h_h_v, P_h_crit, h_h_crit, param2.H] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, h_c_l, h_c_v, P_c_crit, h_c_crit, param.C);
-        [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, h_c_l, h_c_v, P_c_crit, h_c_crit, param2.C] = deal(fluid_h_int, P_h_su_int, in_h_su_int, m_dot_h_int, T_h_su_int, h_h_l_int, h_h_v_int, P_h_crit_int, h_h_crit_int, H_int);
+        [fluid_h_int, P_h_su_int, in_h_su_int, m_dot_h_int, T_h_su_int, h_h_l_int, h_h_v_int, P_h_crit_int, H_int] = deal(fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, h_h_l, h_h_v, P_h_crit, param.H);        
+        [fluid_h, P_h_su, in_h_su, m_dot_h, T_h_su, h_h_l, h_h_v, P_h_crit, param2.H] = deal(fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, h_c_l, h_c_v, P_c_crit, param.C);
+        [fluid_c, P_c_su, in_c_su, m_dot_c, T_c_su, h_c_l, h_c_v, P_c_crit, param2.C] = deal(fluid_h_int, P_h_su_int, in_h_su_int, m_dot_h_int, T_h_su_int, h_h_l_int, h_h_v_int, P_h_crit_int, H_int);
         clear param; param = param2;        
         flag_reverse = 1;
     end
@@ -545,17 +551,17 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             end            
                        
             % Power and enthalpy vectors calculation
-            Q_dot_max = HEX_Qdotmax_2(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); %Compute the maximum heat power that can be transferred between the two media
-            out_max = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); %Evaluate temperature profile based on Q_dot_max
+            Q_dot_max = HEX_Qdotmax_2(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit); %Compute the maximum heat power that can be transferred between the two media
+            out_max = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param, h_h_l, h_h_v, h_c_l, h_c_v); %Evaluate temperature profile based on Q_dot_max
             lb = 0; % Minimum heat power that can be transferred between the two media
             ub = Q_dot_max; % Maximum heat power that can be transferred between the two media
-            f = @(Q_dot) HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); % function to solve in order to find Q_dot_eff in the heat exchanger
+            f = @(Q_dot) HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit); % function to solve in order to find Q_dot_eff in the heat exchanger
             if f(ub) > 0
                 Q_dot_eff = ub; % HEX so oversized that the effective heat power is equal to Q_dot_max
             else
                 Q_dot_eff = zeroBrent ( lb, ub, 1e-8, 1e-8, f ); % Solver driving residuals of HEX_hConvVar_res to zero
             end
-            out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_eff, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); %Evaluate temperature profile based on Q_dot_eff
+            out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_eff, param, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit); %Evaluate temperature profile based on Q_dot_eff
             out.Q_dot_tot = Q_dot_eff;
             out.epsilon_th = Q_dot_eff/Q_dot_max;
             out.H.h_ex = out.H.H_vec(1);
@@ -817,17 +823,17 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             end
             
             % Power and enthalpy vectors calculation
-            Q_dot_max = HEX_Qdotmax_2(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); %Compute the maximum heat power that can be transferred between the two media
-            out_max = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit);  %Evaluate temperature profile based on Q_dot_max
+            Q_dot_max = HEX_Qdotmax_2(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit); %Compute the maximum heat power that can be transferred between the two media
+            out_max = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param, h_h_l, h_h_v, h_c_l, h_c_v);  %Evaluate temperature profile based on Q_dot_max
             lb = 0; % Minimum heat power that can be transferred between the two media
             ub = Q_dot_max; % Maximum heat power that can be transferred between the two media
-            f = @(Q_dot) HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); % function to solve in order to find Q_dot_eff in the heat exchanger
+            f = @(Q_dot) HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit); % function to solve in order to find Q_dot_eff in the heat exchanger
             if f(ub) > 0
                 Q_dot_eff = ub; % HEX so oversized that the effective heat power is equal to Q_dot_max
             else
                 Q_dot_eff = zeroBrent ( lb, ub, 1e-6, 1e-6, f ); % Solver driving residuals of HEX_hConvVar_res to zero
             end
-            out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot_eff), param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); %Evaluate temperature profile based on Q_dot_eff
+            out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot_eff), param, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit); %Evaluate temperature profile based on Q_dot_eff
             out.Q_dot_tot = real(Q_dot_eff);
             out.epsilon_th = real(Q_dot_eff)/Q_dot_max;
             out.H.h_ex = out.H.H_vec(1);
@@ -973,8 +979,8 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                 end
             end
             
-            out.H.M = sum(out.H.M_vec);
-            out.C.M = sum(out.C.M_vec);
+            out.H.M_tot = sum(out.H.M_vec);
+            out.C.M_tot = sum(out.C.M_vec);
             %out.M_cbis = sum(out.M_cbis_vec);
 
             %out.A_c_2p = sum(out.A_c(strcmp(out.type_zone_c, 'tp')));
@@ -1149,14 +1155,14 @@ out = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, i
 res = pinch - out.pinch;
 end
 
-function res = HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit)
+function res = HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit)
 % function giving the residual committed on the HEX surface area for a given Q_dot
-out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit);
+out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit);
 res = out.resA;
 end
 
-function out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit)
-out = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
+function out = HEX_hConvVar(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit)
+out = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
 [out.H.hConv_vec, out.C.hConv_vec, out.DTlog, out.H.eff_vec, out.C.eff_vec, out.H.A_vec, out.C.A_vec, out.C.U_vec] = deal(NaN*ones(1,length(out.H.H_vec)-1));
 
 for j = 1:length(out.H.T_vec)-1
@@ -1164,21 +1170,21 @@ for j = 1:length(out.H.T_vec)-1
     % Hot side heat transfer coefficient
     if strcmp(info.H.type, 'H')
         if isempty(strfind(fluid_h, 'INCOMP:'))
-            if P_h_su < P_h_crit
-                if (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) < h_h_l
-                    out.H.hConv_vec(j) = info.H.hConv_liq_n*(m_dot_h/info.H.m_dot_n)^info.H.n_liq;
-                    out.H.type_zone{j} = 'liq';
-                elseif (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) > h_h_v
-                    out.H.hConv_vec(j) = info.H.hConv_vap_n*(m_dot_h/info.H.m_dot_n)^info.H.n_vap;
-                    out.H.type_zone{j} = 'vap';
-                else
+            if (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) < h_h_l
+                out.H.hConv_vec(j) = info.H.hConv_liq_n*(m_dot_h/info.H.m_dot_n)^info.H.n_liq;
+                out.H.type_zone{j} = 'liq';
+            elseif (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) > h_h_v
+                out.H.hConv_vec(j) = info.H.hConv_vap_n*(m_dot_h/info.H.m_dot_n)^info.H.n_vap;
+                out.H.type_zone{j} = 'vap';
+            else
+                if P_h_su < P_h_crit
                     out.H.hConv_vec(j) = info.H.hConv_tp_n*(m_dot_h/info.H.m_dot_n)^info.H.n_tp;
                     out.H.type_zone{j} = 'tp';
+                else
+                    out.H.hConv_vec(j) = info.H.hConv_supcrit_n*(m_dot_h/info.H.m_dot_n)^info.H.n_supcrit;
+                    out.H.type_zone{j} = 'supcrit';
                 end
-            else
-                out.H.hConv_vec(j) = info.H.hConv_supcrit_n*(m_dot_h/info.H.m_dot_n)^info.H.n_supcrit;
-                out.H.type_zone{j} = 'supcrit';
-            end
+            end           
         else
             out.H.hConv_vec(j) = info.H.hConv_liq_n*(m_dot_h/info.H.m_dot_n)^info.n_h_liq;
             out.H.type_zone{j} = 'liq';
@@ -1191,20 +1197,20 @@ for j = 1:length(out.H.T_vec)-1
     % Cold side heat transfer coefficient
     if strcmp(info.C.type, 'H')
         if isempty(strfind(fluid_c, 'INCOMP:'))
-            if P_c_su < P_c_crit
-                if (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) < h_c_l
-                    out.C.hConv_vec(j) = info.C.hConv_liq_n*(m_dot_c/info.C.m_dot_n)^info.C.n_liq;
-                    out.C.type_zone{j} = 'liq';
-                elseif (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) > h_c_v
-                    out.C.hConv_vec(j) = info.C.hConv_vap_n*(m_dot_c/info.C.m_dot_n)^info.C.n_vap;
-                    out.C.type_zone{j} = 'vap';
-                else
+            if (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) < h_c_l
+                out.C.hConv_vec(j) = info.C.hConv_liq_n*(m_dot_c/info.C.m_dot_n)^info.C.n_liq;
+                out.C.type_zone{j} = 'liq';
+            elseif (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) > h_c_v
+                out.C.hConv_vec(j) = info.C.hConv_vap_n*(m_dot_c/info.C.m_dot_n)^info.C.n_vap;
+                out.C.type_zone{j} = 'vap';
+            else
+                if P_c_su < P_c_crit
                     out.C.hConv_vec(j) = info.C.hConv_tp_n*(m_dot_c/info.C.m_dot_n)^info.C.n_tp;
                     out.C.type_zone{j} = 'tp';
+                else
+                    out.C.hConv_vec(j) = info.C.hConv_supcrit_n*(m_dot_h/info.C.m_dot_n)^info.C.n_supcrit;
+                    out.C.type_zone{j} = 'supcrit';
                 end
-            else
-                out.C.hConv_vec(j) = info.C.hConv_supcrit_n*(m_dot_c/info.C.m_dot_n)^info.C.n_supcrit;
-                out.C.type_zone{j} = 'supcrit';
             end
         else
             out.C.hConv_vec(j) = info.C.hConv_liq_n*(m_dot_c/info.C.m_dot_n)^info.C.n_liq;
@@ -1246,15 +1252,15 @@ out.C.A_tot = sum(out.C.A_vec);
 out.resA = 1 - out.H.A_tot/info.H.A_tot;
 end
 
-function res = HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit)
+function res = HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit)
 % function giving the residual committed on the HEX surface area for a given Q_dot
-out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot), info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit);
+out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot), info, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit);
 res = out.resA;
 
 end
 
-function out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit)
-out = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
+function out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit)
+out = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v); %evaluate the temperature profile for a given heat power, cfr documentation of HEX_profile
 [out.H.A_vec, out.C.A_vec, out.H.hConv_vec, out.C.hConv_vec, out.DTlog] = deal(NaN*ones(1,length(out.H.H_vec)-1));
 
 for j = 1:length(out.H.T_vec)-1
@@ -1265,17 +1271,17 @@ for j = 1:length(out.H.T_vec)-1
     % What type of cells for hot side (1phase/2phase/supercrit?)    
     if strcmp(info.H.type, 'H')
         if isempty(strfind(fluid_h, 'INCOMP:'))
-            if P_h_su < P_h_crit
-                if (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) < h_h_l
-                    out.H.type_zone{j} = 'liq';
-                elseif (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) > h_h_v
-                    out.H.type_zone{j} = 'vap';
-                else
-                    out.H.type_zone{j} = 'tp';
-                end
+            if (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) < h_h_l
+                out.H.type_zone{j} = 'liq';
+            elseif (0.5*out.H.H_vec(j)+0.5*out.H.H_vec(j+1)) > h_h_v
+                out.H.type_zone{j} = 'vap';
             else
-                out.H.type_zone{j} = 'supcrit';
-            end
+                if P_h_su < P_h_crit
+                    out.H.type_zone{j} = 'tp';
+                else
+                    out.H.type_zone{j} = 'supcrit';
+                end
+            end           
         else
             out.H.type_zone{j} = 'liq';
         end
@@ -1286,16 +1292,16 @@ for j = 1:length(out.H.T_vec)-1
     % What type of cells for cold side (1phase or 2phase?)
     if strcmp(info.C.type, 'H')
         if isempty(strfind(fluid_c, 'INCOMP:'))
-            if P_c_su < P_c_crit
-                if (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) < h_c_l
-                    out.C.type_zone{j} = 'liq';
-                elseif (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) > h_c_v
-                    out.C.type_zone{j} = 'vap';
-                else
-                    out.C.type_zone{j} = 'tp';
-                end
+            if (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) < h_c_l
+                out.C.type_zone{j} = 'liq';
+            elseif (0.5*out.C.H_vec(j)+0.5*out.C.H_vec(j+1)) > h_c_v
+                out.C.type_zone{j} = 'vap';
             else
-                out.C.type_zone{j} = 'supcrit';
+                if P_c_su < P_c_crit
+                    out.C.type_zone{j} = 'tp';
+                else
+                    out.C.type_zone{j} = 'supcrit';
+                end
             end
         else
             out.C.type_zone{j} = 'liq';

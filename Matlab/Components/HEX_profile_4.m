@@ -1,4 +1,4 @@
-function out = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, param, h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit)
+function out = HEX_profile_4(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, param, h_h_l, h_h_v, h_c_l, h_c_v)
 
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
@@ -50,98 +50,75 @@ if strcmp(param.H.type,'H') && strcmp(param.C.type,'H')  %% CASE 1 : HOT FLUID A
     % Cell division for hot fluid (create a vector of enthalpy the different zones on the hot fluid side)
     h_h_su = in_h_su; 
     h_h_ex = h_h_su - Q_dot/m_dot_h;
-    if P_h_su < P_h_crit
-        if not(isempty(strfind(fluid_h, 'INCOMP:')))
-            h_h_l = h_h_su*3;
-            h_h_v = h_h_su*3;
-        end
-        if round(h_h_v,decim) < round(h_h_ex,decim)
-            H_h_vec = [h_h_ex  h_h_su]; %if vapour-phase only
-        elseif round(h_h_l,decim) > round(h_h_su,decim)
-            H_h_vec = [h_h_ex  h_h_su]; % if liquid-phase only
-        elseif (round(h_h_l,decim) < round(h_h_ex,decim)) && (round(h_h_v,decim) > round(h_h_su,decim))
-            if round(h_h_su,decim) > round(h_h_ex,decim)
-                H_h_vec = linspace(h_h_ex, h_h_su, param.n_tp_disc); % if two-phase only
-            else
-                H_h_vec = [h_h_ex, h_h_su];
-            end
-        elseif (round(h_h_l,decim) < round(h_h_su,decim)) && (round(h_h_l,decim) > round(h_h_ex,decim))
-            if (round(h_h_v,decim) < round(h_h_su,decim))
-                H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_tp_disc)  h_h_su]; % if liquid, two phase and vapour
-            else
-                H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_su, param.n_tp_disc)]; % if liquid and two phase
-            end
-        elseif (round(h_h_v,decim) > round(h_h_ex,decim)) && (round(h_h_v,decim) < round(h_h_su,decim))
-            if (round(h_h_l,decim) > round(h_h_ex,decim))
-                H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_tp_disc) h_h_su]; % if liquid, two phase and vapour
-            else
-                H_h_vec = [linspace(h_h_ex,  h_h_v, param.n_tp_disc)  h_h_su]; % of twp phase and vapour
-            end
-        else
-            H_h_vec = [h_h_ex  h_h_su]; %in all other cases (should never happen)
-        end
-    else      
-        if round(h_h_crit,decim) < round(h_h_ex,decim) %if supercritical-phase only
-            H_h_vec = linspace(h_h_ex, h_h_su, param.n_supcrit_disc);
-        elseif round(h_h_crit,decim) > round(h_h_su,decim) %if liquid-phase only
-            H_h_vec = [h_h_ex  h_h_su];
-        elseif (round(h_h_crit,decim) > round(h_h_ex,decim)) && (round(h_h_crit,decim) < round(h_h_su,decim)) %if both
-             H_h_vec = [h_h_ex linspace(h_h_crit,  h_h_su, param.n_supcrit_disc)];
-        else
-            H_h_vec = [h_h_ex  h_h_su]; %in ant other case (should never happen)
-        end
+    if not(isempty(strfind(fluid_h, 'INCOMP:')))
+        h_h_l = h_h_su*3;
+        h_h_v = h_h_su*3;
     end
+    if round(h_h_v,decim) < round(h_h_ex,decim)
+        H_h_vec = [h_h_ex  h_h_su]; %if vapour-phase only
+    elseif round(h_h_l,decim) > round(h_h_su,decim)
+        H_h_vec = [h_h_ex  h_h_su]; % if liquid-phase only
+    elseif (round(h_h_l,decim) < round(h_h_ex,decim)) && (round(h_h_v,decim) > round(h_h_su,decim))
+        if round(h_h_su,decim) > round(h_h_ex,decim)
+            H_h_vec = linspace(h_h_ex, h_h_su, param.n_disc); % if two-phase only
+        else
+            H_h_vec = [h_h_ex, h_h_su];
+        end
+    elseif (round(h_h_l,decim) < round(h_h_su,decim)) && (round(h_h_l,decim) > round(h_h_ex,decim))
+        if (round(h_h_v,decim) < round(h_h_su,decim))
+            H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_disc)  h_h_su]; % if liquid, two phase and vapour
+        else
+            H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_su, param.n_disc)]; % if liquid and two phase
+        end
+    elseif (round(h_h_v,decim) > round(h_h_ex,decim)) && (round(h_h_v,decim) < round(h_h_su,decim))
+        if (round(h_h_l,decim) > round(h_h_ex,decim))
+            H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_disc) h_h_su]; % if liquid, two phase and vapour
+        else
+            H_h_vec = [linspace(h_h_ex,  h_h_v, param.n_disc)  h_h_su]; % of twp phase and vapour
+        end
+    else
+        H_h_vec = [h_h_ex  h_h_su]; %in all other cases (should never happen)
+    end
+
     
     % Cell division for cold fluid (create a vector of enthalpy the different zones on the cold fluid side)
     h_c_su = in_c_su;
     h_c_ex = h_c_su + Q_dot/m_dot_c;
-    if P_c_su < P_c_crit
-        if not(isempty(strfind(fluid_c, 'INCOMP:')))
-            h_c_l = h_c_ex*3;
-            h_c_v = h_c_ex*3;
-        end
-        if round(h_c_v,decim) < round(h_c_su,decim)
-            H_c_vec = [h_c_su  h_c_ex]; % if vapour only
-        elseif round(h_c_l,decim) > round(h_c_ex,decim)
-            H_c_vec = [h_c_su  h_c_ex]; % if liquid only
-        elseif (round(h_c_l,decim) < round(h_c_su,decim)) && (round(h_c_v,decim) > round(h_c_ex,decim))
-            if round(h_c_su,decim) < round(h_c_ex,decim)
-                H_c_vec = linspace(h_c_su,  h_c_ex, param.n_tp_disc); % if two-phase only
-            else
-                H_c_vec = [h_c_su,  h_c_ex];
-            end
-        elseif (round(h_c_l,decim) > round(h_c_su,decim)) && (round(h_c_l,decim) < round(h_c_ex,decim))
-            if (round(h_c_v,decim) < round(h_c_ex,decim))
-                H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_tp_disc) h_c_ex]; % if liquid, two phase and vapour
-            else
-                H_c_vec = [h_c_su  linspace(h_c_l,  h_c_ex, param.n_tp_disc)]; % if liquid and two-phase
-            end
-        elseif (round(h_c_v,decim) > round(h_c_su,decim)) && (round(h_c_v,decim) < round(h_c_ex,decim))
-            if (round(h_c_l,decim) > round(h_c_su,decim))
-                H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_tp_disc)  h_c_ex]; % if liquid, two phase and vapour
-            else
-                H_c_vec = [linspace(h_c_su,  h_c_v, param.n_tp_disc)  h_c_ex]; %if two-phase and vapour
-            end
+    if not(isempty(strfind(fluid_c, 'INCOMP:')))
+        h_c_l = h_c_ex*3;
+        h_c_v = h_c_ex*3;
+    end
+    if round(h_c_v,decim) < round(h_c_su,decim)
+        H_c_vec = [h_c_su  h_c_ex]; % if vapour only
+    elseif round(h_c_l,decim) > round(h_c_ex,decim)
+        H_c_vec = [h_c_su  h_c_ex]; % if liquid only
+    elseif (round(h_c_l,decim) < round(h_c_su,decim)) && (round(h_c_v,decim) > round(h_c_ex,decim))
+        if round(h_c_su,decim) < round(h_c_ex,decim)
+            H_c_vec = linspace(h_c_su,  h_c_ex, param.n_disc); % if two-phase only
         else
-            H_c_vec = [h_c_su  h_c_ex]; %in all other cases (should never happen)
+            H_c_vec = [h_c_su,  h_c_ex];
+        end
+    elseif (round(h_c_l,decim) > round(h_c_su,decim)) && (round(h_c_l,decim) < round(h_c_ex,decim))
+        if (round(h_c_v,decim) < round(h_c_ex,decim))
+            H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_disc) h_c_ex]; % if liquid, two phase and vapour
+        else
+            H_c_vec = [h_c_su  linspace(h_c_l,  h_c_ex, param.n_disc)]; % if liquid and two-phase
+        end
+    elseif (round(h_c_v,decim) > round(h_c_su,decim)) && (round(h_c_v,decim) < round(h_c_ex,decim))
+        if (round(h_c_l,decim) > round(h_c_su,decim))
+            H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_disc)  h_c_ex]; % if liquid, two phase and vapour
+        else
+            H_c_vec = [linspace(h_c_su,  h_c_v, param.n_disc)  h_c_ex]; %if two-phase and vapour
         end
     else
-        if round(h_c_crit,decim) < round(h_c_su,decim) %if supercritical-phase only
-            H_c_vec = linspace(h_c_su, h_c_ex, param.n_supcrit_disc);
-        elseif round(h_c_crit,decim) > round(h_c_ex,decim) %if liquid-phase only
-            H_c_vec = [h_c_su  h_c_ex];
-        elseif (round(h_c_crit,decim) > round(h_c_su,decim)) && (round(h_c_crit,decim) < round(h_c_ex,decim)) %if both
-            H_c_vec = [h_c_su linspace(h_c_crit,  h_c_ex, param.n_supcrit_disc)];
-            %H_c_vec = [ linspace(h_c_su,  h_c_ex, param.n_supcrit_disc)];
-        else
-            H_c_vec = [h_c_su  h_c_ex]; % in any other case
-        end
+        H_c_vec = [h_c_su  h_c_ex]; %in all other cases (should never happen)
     end
-    
+
 
     % Cell divitions for entire heat exchanger
     j = 1;
     while  j < max(length(H_h_vec),length(H_c_vec))-1
+        
         Q_dot_h = m_dot_h*(H_h_vec(j+1)-H_h_vec(j));
         Q_dot_c = m_dot_c*(H_c_vec(j+1)-H_c_vec(j));
 
@@ -171,47 +148,34 @@ if strcmp(param.H.type,'H') && strcmp(param.C.type,'H')  %% CASE 1 : HOT FLUID A
 elseif strcmp(param.H.type,'T') && strcmp(param.C.type,'H') %% CASE 2 : HOT FLUID IS LIQUID (incompressible fluid) AND COLD FLUID MIGHT EXPERIENCE A PHASE CHANGE   
     h_c_su = in_c_su;
     h_c_ex = h_c_su + Q_dot/m_dot_c;    
-    if P_c_su < P_c_crit
-        if not(isempty(strfind(fluid_c, 'INCOMP:')))
-            h_c_l = h_c_ex*3;
-            h_c_v = h_c_ex*3;
-        end
-        if round(h_c_v,decim) < round(h_c_su,decim)
-            H_c_vec = [h_c_su  h_c_ex]; % if vapour only
-        elseif round(h_c_l,decim) > round(h_c_ex,decim)
-            H_c_vec = [h_c_su  h_c_ex]; % if liquid only
-        elseif (round(h_c_l,decim) < round(h_c_su,decim)) && (round(h_c_v,decim) > round(h_c_ex,decim))
-            if round(h_c_su,decim) < round(h_c_ex,decim)
-                H_c_vec = linspace(h_c_su,  h_c_ex, param.n_tp_disc); % if two-phase only
-            else
-                H_c_vec = [h_c_su,  h_c_ex];
-            end
-        elseif (round(h_c_l,decim) > round(h_c_su,decim)) && (round(h_c_l,decim) < round(h_c_ex,decim))
-            if (round(h_c_v,decim) < round(h_c_ex,decim))
-                H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_tp_disc) h_c_ex]; % if liquid, two phase and vapour
-            else
-                H_c_vec = [h_c_su  linspace(h_c_l,  h_c_ex, param.n_tp_disc)]; % if liquid and two-phase
-            end
-        elseif (round(h_c_v,decim) > round(h_c_su,decim)) && (round(h_c_v,decim) < round(h_c_ex,decim))
-            if (round(h_c_l,decim) > round(h_c_su,decim))
-                H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_tp_disc)  h_c_ex]; % if liquid, two phase and vapour
-            else
-                H_c_vec = [linspace(h_c_su,  h_c_v, param.n_tp_disc)  h_c_ex]; %if two-phase and vapour
-            end
+    if not(isempty(strfind(fluid_c, 'INCOMP:')))
+        h_c_l = h_c_ex*3;
+        h_c_v = h_c_ex*3;
+    end
+    if round(h_c_v,decim) < round(h_c_su,decim)
+        H_c_vec = [h_c_su  h_c_ex]; % if vapour only
+    elseif round(h_c_l,decim) > round(h_c_ex,decim)
+        H_c_vec = [h_c_su  h_c_ex]; % if liquid only
+    elseif (round(h_c_l,decim) < round(h_c_su,decim)) && (round(h_c_v,decim) > round(h_c_ex,decim))
+        if round(h_c_su,decim) < round(h_c_ex,decim)
+            H_c_vec = linspace(h_c_su,  h_c_ex, param.n_disc); % if two-phase only
         else
-            H_c_vec = [h_c_su  h_c_ex]; %in all other cases (should never happen)
+            H_c_vec = [h_c_su,  h_c_ex];
+        end
+    elseif (round(h_c_l,decim) > round(h_c_su,decim)) && (round(h_c_l,decim) < round(h_c_ex,decim))
+        if (round(h_c_v,decim) < round(h_c_ex,decim))
+            H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_disc) h_c_ex]; % if liquid, two phase and vapour
+        else
+            H_c_vec = [h_c_su  linspace(h_c_l,  h_c_ex, param.n_disc)]; % if liquid and two-phase
+        end
+    elseif (round(h_c_v,decim) > round(h_c_su,decim)) && (round(h_c_v,decim) < round(h_c_ex,decim))
+        if (round(h_c_l,decim) > round(h_c_su,decim))
+            H_c_vec = [h_c_su  linspace(h_c_l,  h_c_v, param.n_disc)  h_c_ex]; % if liquid, two phase and vapour
+        else
+            H_c_vec = [linspace(h_c_su,  h_c_v, param.n_disc)  h_c_ex]; %if two-phase and vapour
         end
     else
-        if round(h_c_crit,decim) < round(h_c_su,decim) %if supercritical-phase only
-            H_c_vec = linspace(h_c_su, h_c_ex, param.n_supcrit_disc);
-        elseif round(h_c_crit,decim) > round(h_c_ex,decim) %if liquid-phase only
-            H_c_vec = [h_c_su  h_c_ex];
-        elseif (round(h_c_crit,decim) > round(h_c_su,decim)) && (round(h_c_crit,decim) < round(h_c_ex,decim)) %if both
-            H_c_vec = [h_c_su linspace(h_c_crit,  h_c_ex, param.n_supcrit_disc)];
-            %H_c_vec = [ linspace(h_c_su,  h_c_ex, param.n_supcrit_disc)];
-        else
-            H_c_vec = [h_c_su  h_c_ex]; % in any other case
-        end
+        H_c_vec = [h_c_su  h_c_ex]; %in all other cases (should never happen)
     end
 
     % if hot fluid incompressible (T as input), only one cell of liquid phase  
@@ -249,47 +213,36 @@ elseif strcmp(param.H.type,'T') && strcmp(param.C.type,'H') %% CASE 2 : HOT FLUI
 elseif strcmp(param.H.type,'H') && strcmp(param.C.type,'T')  %% CASE 3 : HOT FLUID MIGHT EXPERIENCE A PHASE CHANGE  AND COLD FLUID IS LIQUID (incompressible fluid)
     h_h_su = in_h_su;
     h_h_ex = h_h_su - Q_dot/m_dot_h;
-    if P_h_su < P_h_crit
-        if not(isempty(strfind(fluid_h, 'INCOMP:')))
-            h_h_l = h_h_su*3;
-            h_h_v = h_h_su*3;
-        end
-        if round(h_h_v,decim) < round(h_h_ex,decim)
-            H_h_vec = [h_h_ex  h_h_su]; %if vapour-phase only
-        elseif round(h_h_l,decim) > round(h_h_su,decim)
-            H_h_vec = [h_h_ex  h_h_su]; % if liquid-phase only
-        elseif (round(h_h_l,decim) < round(h_h_ex,decim)) && (round(h_h_v,decim) > round(h_h_su,decim))
-            if round(h_h_su,decim) > round(h_h_ex,decim)
-                H_h_vec = linspace(h_h_ex, h_h_su, param.n_tp_disc); % if two-phase only
-            else
-                H_h_vec = [h_h_ex, h_h_su];
-            end
-        elseif (round(h_h_l,decim) < round(h_h_su,decim)) && (round(h_h_l,decim) > round(h_h_ex,decim))
-            if (round(h_h_v,decim) < round(h_h_su,decim))
-                H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_tp_disc)  h_h_su]; % if liquid, two phase and vapour
-            else
-                H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_su, param.n_tp_disc)]; % if liquid and two phase
-            end
-        elseif (round(h_h_v,decim) > round(h_h_ex,decim)) && (round(h_h_v,decim) < round(h_h_su,decim))
-            if (round(h_h_l,decim) > round(h_h_ex,decim))
-                H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_tp_disc) h_h_su]; % if liquid, two phase and vapour
-            else
-                H_h_vec = [linspace(h_h_ex,  h_h_v, param.n_tp_disc)  h_h_su]; % of twp phase and vapour
-            end
+    if not(isempty(strfind(fluid_h, 'INCOMP:')))
+        h_h_l = h_h_su*3;
+        h_h_v = h_h_su*3;
+    end
+    if round(h_h_v,decim) < round(h_h_ex,decim)
+        H_h_vec = [h_h_ex  h_h_su]; %if vapour-phase only
+    elseif round(h_h_l,decim) > round(h_h_su,decim)
+        H_h_vec = [h_h_ex  h_h_su]; % if liquid-phase only
+    elseif (round(h_h_l,decim) < round(h_h_ex,decim)) && (round(h_h_v,decim) > round(h_h_su,decim))
+        if round(h_h_su,decim) > round(h_h_ex,decim)
+            H_h_vec = linspace(h_h_ex, h_h_su, param.n_disc); % if two-phase only
         else
-            H_h_vec = [h_h_ex  h_h_su]; %in all other cases (should never happen)
+            H_h_vec = [h_h_ex, h_h_su];
+        end
+    elseif (round(h_h_l,decim) < round(h_h_su,decim)) && (round(h_h_l,decim) > round(h_h_ex,decim))
+        if (round(h_h_v,decim) < round(h_h_su,decim))
+            H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_disc)  h_h_su]; % if liquid, two phase and vapour
+        else
+            H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_su, param.n_disc)]; % if liquid and two phase
+        end
+    elseif (round(h_h_v,decim) > round(h_h_ex,decim)) && (round(h_h_v,decim) < round(h_h_su,decim))
+        if (round(h_h_l,decim) > round(h_h_ex,decim))
+            H_h_vec = [h_h_ex  linspace(h_h_l,  h_h_v, param.n_disc) h_h_su]; % if liquid, two phase and vapour
+        else
+            H_h_vec = [linspace(h_h_ex,  h_h_v, param.n_disc)  h_h_su]; % of twp phase and vapour
         end
     else
-        if round(h_h_crit,decim) < round(h_h_ex,decim) %if supercritical-phase only
-            H_h_vec = linspace(h_h_ex, h_h_su, param.n_supcrit_disc);
-        elseif round(h_h_crit,decim) > round(h_h_su,decim) %if liquid-phase only
-            H_h_vec = [h_h_ex  h_h_su];
-        elseif (round(h_h_crit,decim) > round(h_h_ex,decim)) && (round(h_h_crit,decim) < round(h_h_su,decim)) %if both
-             H_h_vec = [h_h_ex linspace(h_h_crit,  h_h_su, param.n_supcrit_disc)];
-        else
-            H_h_vec = [h_h_ex  h_h_su]; %in ant other case (should never happen)
-        end
+        H_h_vec = [h_h_ex  h_h_su]; %in all other cases (should never happen)
     end
+
    
     % if cold fluid incompressible (T as input), only one cell of liquid phase  
     T_c_su = in_c_su;

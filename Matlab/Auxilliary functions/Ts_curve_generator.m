@@ -1,4 +1,4 @@
-fluid = 'R245fa';
+fluid = 'R134a';
 P_crit = 0.99*CoolProp.PropsSI('Pcrit', 'T', 0, 'P', 0, fluid);
 P_min = CoolProp.PropsSI('P', 'T', 273.15-10, 'Q', 0, fluid);
 P_lin = linspace(P_min, P_crit, 100);

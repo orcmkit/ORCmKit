@@ -118,6 +118,7 @@ if not(isfield(param,'AU'))
     param.AU =  0;
 end
 
+
 T_su = CoolProp.PropsSI('T','P',P_su,'H',h_su,fluid);
 s_su = CoolProp.PropsSI('S','P',P_su,'H',h_su,fluid);
 rho_su = CoolProp.PropsSI('D','P',P_su,'H',h_su,fluid);
@@ -166,7 +167,14 @@ if P_su < P_ex && N_pp > 0
             A_leak = param.A_leak;
             W_dot_loss = param.W_dot_0_loss;
             K_0_loss = param.K_0_loss;
-            m_dot = max(1e-3, (N_pp/60*V_s*rho_su)-(A_leak*sqrt(2*rho_su*(P_ex-P_su))));
+            if isfield(param,'fit_NPSHr')
+                NPSH_r = param.fit_NPSHr(N_pp);
+                NPSH_a = (P_su-CoolProp.PropsSI('P', 'Q', 0, 'T', T_su, fluid))/rho_su/9.81;
+                eta_cavitation =  1-exp(log(0.03)*(NPSH_a/NPSH_r));
+            else
+                eta_cavitation = 1;
+            end
+            m_dot = max(1e-3, eta_cavitation*((N_pp/60*V_s*rho_su)-(A_leak*sqrt(2*rho_su*(P_ex-P_su)))));
             epsilon_vol = m_dot/(N_pp/60*V_s*rho_su);
             W_dot = W_dot_loss + K_0_loss*m_dot/rho_su*(P_ex-P_su);
             epsilon_is = (m_dot*(h_ex_s-h_su))/W_dot;

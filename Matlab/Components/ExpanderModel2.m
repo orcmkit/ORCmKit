@@ -116,8 +116,8 @@ if nargin == 0
             param.AU_ex_n = 94.017028808593750;
             param.AU_amb = 0.674005126953125;
     end
-    load('C:\Users\RDickes\Google Drive\PhD\MOR study\ORC\Experimental database\Sun2Power\OffDesign\gamma_R245fa.mat');
-    param.gamma.gamma_PQ_pol = gamma_PQ_R245fa; param.gamma.gamma_PT_pol = gamma_PT_R245fa;
+    load([cd '\FluidProperties\gamma_' fluid '.mat']);
+    param.gamma.gamma_PQ_pol = eval(['gamma_PQ_' fluid]); param.gamma.gamma_PT_pol = eval(['gamma_PT_' fluid]);
 end
 
 tstart_exp = tic;

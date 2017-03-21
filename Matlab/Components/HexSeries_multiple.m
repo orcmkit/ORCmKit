@@ -125,8 +125,8 @@ end
 %% MODELING OF MULTIPLE HEAT EXCHANGERS IN SERIES
 % Evaluation of the hot fluid (HF) supply conditions
 if strcmp(param(1).H.type,'H')
-    T_h_su = CoolProp.PropsSI('T','P',P_h_su,'H',in_h_su, fluid_h);
     P_h_crit = CoolProp.PropsSI('Pcrit','P',P_h_su,'Q',0,fluid_h);
+    h_h_crit = CoolProp.PropsSI('H','P',P_h_su,'T',CoolProp.PropsSI('Tcrit','P',P_h_su,'Q',0,fluid_h)-0.01,fluid_h);
     if P_h_su < P_h_crit
         h_h_l = CoolProp.PropsSI('H','P',P_h_su,'Q',0,fluid_h);
         h_h_v = CoolProp.PropsSI('H','P',P_h_su,'Q',1,fluid_h);
@@ -135,16 +135,16 @@ if strcmp(param(1).H.type,'H')
         h_h_v = NaN;
     end
 elseif strcmp(param(1).H.type,'T')
-    T_h_su = in_h_su;
     P_h_crit = NaN;
+    h_h_crit = NaN;
     h_h_l = NaN;
     h_h_v = NaN;
 end
 
 % Evaluation of the cold fluid (CF) supply conditions
 if strcmp(param(1).C.type,'H')
-    T_c_su = CoolProp.PropsSI('T','P',P_c_su,'H',in_c_su, fluid_c);
     P_c_crit = CoolProp.PropsSI('Pcrit','P',P_c_su,'Q',0,fluid_c);
+    h_c_crit = CoolProp.PropsSI('H','P',P_c_su,'T',CoolProp.PropsSI('Tcrit','P',P_c_su,'Q',0,fluid_c)-0.01,fluid_c);
     if P_c_su < P_c_crit
         h_c_l = CoolProp.PropsSI('H','P',P_c_su,'Q', 0, fluid_c);
         h_c_v = CoolProp.PropsSI('H','P',P_c_su,'Q', 1, fluid_c);
@@ -153,14 +153,15 @@ if strcmp(param(1).C.type,'H')
         h_c_v = NaN;
     end
 elseif strcmp(param(1).C.type,'T')
-    T_c_su = in_c_su;
     P_c_crit = NaN;
+    h_c_crit = NaN;
     h_c_l = NaN;
     h_c_v = NaN;
 end
 
+
 N_hex = length(param);
-Q_dot_max = HEX_Qdotmax_2(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param(1), h_h_l, h_h_v, P_h_crit, h_c_l, h_c_v, P_c_crit);
+Q_dot_max = HEX_Qdotmax_2(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param(1), h_h_l, h_h_v, P_h_crit, h_h_crit, h_c_l, h_c_v, P_c_crit, h_c_crit);
 lb = 0*ones(1,N_hex);
 ub = Q_dot_max*ones(1,N_hex);
 f = @(x) hexseries_multiple_res(x, ub, fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, param, N_hex);
@@ -221,7 +222,7 @@ end
 
 in_h_int(N_hex+1) = in_h_su;
 for i = flip(1:N_hex)
-    [out.int_hex(i), out.TS(i)] = HexModel_supcrit(fluid_h, P_h_su, in_h_int(i+1), m_dot_h, fluid_c, P_c_su, in_c_int(i), m_dot_c, param(i));
+    [out.int_hex(i), out.TS(i)] = HexModel2(fluid_h, P_h_su, in_h_int(i+1), m_dot_h, fluid_c, P_c_su, in_c_int(i), m_dot_c, param(i));
     if strcmp(param(i).H.type, 'H')
         in_h_int(i) = out.int_hex(i).H.h_ex;
     elseif strcmp(param(i).H.type, 'T')
