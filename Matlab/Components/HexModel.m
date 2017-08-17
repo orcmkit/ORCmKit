@@ -571,10 +571,11 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             
             % Power and enthalpy vectors calculation
             Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param); %Compute the maximum heat power that can be transferred between the two media
-            out_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param); %Evaluate temperature profile based on Q_dot_max
+            out_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param) %Evaluate temperature profile based on Q_dot_max
             lb = 0; % Minimum heat power that can be transferred between the two media
             ub = Q_dot_max; % Maximum heat power that can be transferred between the two media
             f = @(Q_dot) HEX_hConvVar_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, h_c_l, h_c_v); % function to solve in order to find Q_dot_eff in the heat exchanger
+            f(ub)
             if f(ub) > 0
                 Q_dot_eff = ub; % HEX so oversized that the effective heat power is equal to Q_dot_max
             else
@@ -807,7 +808,6 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
                     if Q_dot_eff == Q_dot_max
                         out.flag = 2;
                     else
-                        %fluid_h, P_h_su, in_h_su, m_dot_h, fluid_c, P_c_su, in_c_su, m_dot_c, param
                         out.flag = -1;
                     end
                     
@@ -1003,7 +1003,7 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             
             out.M_h = sum(out.M_h_vec);
             out.M_c = sum(out.M_c_vec);
-            out.M_cbis = sum(out.M_cbis_vec);
+            %out.M_cbis = sum(out.M_cbis_vec);
 
             %out.A_c_2p = sum(out.A_c(strcmp(out.type_zone_c, 'tp')));
             %out.V_c_2p = sum(out.V_c_vec(strcmp(out.type_zone_c, 'tp')));
