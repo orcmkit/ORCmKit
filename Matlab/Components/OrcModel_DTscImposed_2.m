@@ -191,7 +191,7 @@ if not(isempty(res_ordered))
     out_ORC_best.res = 1e10;
     stop = 0;
     options_fmincon = optimset('Disp',param.displayIter,'Algorithm','interior-point','UseParallel',false,'TolX',1e-13,'TolFun',1e-13,'TolCon',1e-6,'MaxIter',1e3,'OutputFcn',@outputfunFS);
-    %options_pattsearch = psoptimset('Display','iter','TolX', 1e-8, 'TolFun', 1e-8, 'TolMesh', 1e-8, 'MaxIter', 1e4, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
+    %options_pattsearch = psoptimset&a('Display','iter','TolX', 1e-8, 'TolFun', 1e-8, 'TolMesh', 1e-8, 'MaxIter', 1e4, 'MaxFunEvals', 1e8, 'OutputFcns',@outputfunPS);
 
     while not(stop) && k <= min(Nbr_comb_x0,Nbr_comb_x0_max);
         

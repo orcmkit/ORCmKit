@@ -849,8 +849,8 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0;
             end            
             % Power and enthalpy vectors calculation
             Q_dot_max = HEX_Qdotmax(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param); %Compute the maximum heat power that can be transferred between the two media
-            out_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param); %Evaluate temperature profile based on Q_dot_max
-            lb = 0; % Minimum heat power that can be transferred between the two media
+            out_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param); %Evaluate temperature profile based on Q_dot_max;
+            lb = 1; % Minimum heat power that can be transferred between the two media
             ub = Q_dot_max; % Maximum heat power that can be transferred between the two media
             f = @(Q_dot) HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su,  Q_dot, param, h_h_l, h_h_v, h_c_l, h_c_v); % function to solve in order to find Q_dot_eff in the heat exchanger
             if f(ub) > 0
@@ -1345,7 +1345,6 @@ end
 function res = HEX_hConvCor_res(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v)
 % function giving the residual committed on the HEX surface area for a given Q_dot
 out = HEX_hConvCor(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, real(Q_dot), info, h_h_l, h_h_v, h_c_l, h_c_v);
-
 res = out.resA;
 
 end
@@ -1492,6 +1491,9 @@ for j = 1:length(out.T_h_vec)-1
                     Nu_h = (Nu_1^3 + 0.6^3 + (Nu_2-0.6)^3)^0.3333333333333333333333;
                 end
                 out.hConv_h(j) = info.fact_corr_sp_h*Nu_h*k_h/info.Dh_h;
+                
+            case 'Manual'
+                out.hConv_h(j) = info.hConv_h_sp;
         end
         
     elseif strcmp(out.type_zone_h{j}, 'tp') 
@@ -1573,7 +1575,8 @@ for j = 1:length(out.T_h_vec)-1
                 Pr_h_l = CoolProp.PropsSI('Prandtl', 'Q', 0, 'P', P_h_su, fluid_h);
                 out.hConv_h(j) = info.fact_corr_2p_h*0.023*(k_h_l/info.Dh_h)*(Re_h_l^(info.fact2_corr_2p_h*0.8))*(Pr_h_l^0.4)*(((1-x_h)^0.8)+ ((3.8*(x_h^0.76)*(1-x_h)^0.04)/(p_h_star^0.38)));
                 
-                                            
+            case 'Manual'
+                out.hConv_h(j) = info.hConv_h_2p;
         end
         
     end
@@ -1667,11 +1670,35 @@ for j = 1:length(out.T_h_vec)-1
                 end
                 G_c = m_dot_c/info.n_canals_c/info.CS_c;
                 Re_c = G_c*info.Dh_c/mu_c;
-                if Re > 2300
+                if Re_c > 2300
                     f_c = (1.8*log10(Re_c)-1.5)^-2; %Konakov correlation
                     Nu_c = ((f_c/8)*(Re_c-1000)*Pr_c)/(1+12.7*sqrt(f_c/8)*(Pr_c^(2/3)-1));
                 else
                     Nu_c = 3.66;
+                end
+                out.hConv_c(j) = info.fact_corr_sp_c*Nu_c*k_c/info.Dh_c;
+                
+            case 'Gnielinski_and_Sha'
+                if strcmp(info.type_c, 'H')
+                    mu_c = CoolProp.PropsSI('V', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    Pr_c = CoolProp.PropsSI('Prandtl', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                    k_c = CoolProp.PropsSI('L', 'H', (0.5*out.H_c_vec(j)+0.5*out.H_c_vec(j+1)), 'P', P_c_su, fluid_c);
+                elseif strcmp(info.type_c, 'T')
+                    cp_c = sf_PropsSI_bar('C', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    k_c = sf_PropsSI_bar('L', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    mu_c = sf_PropsSI_bar('V', out.T_c_vec(j), out.T_c_vec(j+1), P_c_su, fluid_c);
+                    Pr_c = cp_c*mu_c/k_c;
+                end
+                G_c = m_dot_c/info.n_canals_c/info.CS_c;
+                
+                Re_c = G_c*info.Dh_c/mu_c;
+                if Re_c > 2300 %source: VDI section G1 - 4.1, page 696
+                    f_c = (1.8*log10(Re_c)-1.5)^-2; %Konakov correlation
+                    Nu_c = ((f_c/8)*(Re_c-1000)*Pr_c)/(1+12.7*sqrt(f_c/8)*(Pr_c^(2/3)-1)); % Gnielinski
+                else %source: VDI section G1 - 3.2.1, page 695
+                    Nu_1 = 4.364;
+                    Nu_2 = 1.953*(Re_c*Pr_c*info.Dh_c/info.Lt_c)^0.33333333333333333333333333333;
+                    Nu_c = (Nu_1^3 + 0.6^3 + (Nu_2-0.6)^3)^0.3333333333333333333333;
                 end
                 out.hConv_c(j) = info.fact_corr_sp_c*Nu_c*k_c/info.Dh_c;
                 
@@ -1719,6 +1746,8 @@ for j = 1:length(out.T_h_vec)-1
                 Nu_c = info.fact_corr_sp_c*(j_c*Re_c_Dc)^(info.fact2_corr_sp_c)*Pr_c^0.33333333333333333333;
                 out.hConv_c(j) = Nu_c*k_c/D_c;
                 
+            case 'Manual'
+                out.hConv_c(j) = info.hConv_c_sp;
         end
         
         
@@ -1843,6 +1872,9 @@ for j = 1:length(out.T_h_vec)-1
                     display('Cooper boiling: Wrong heat flux')
                 end
                 out.hConv_c(j) = h;
+                
+            case 'Manual'
+                out.hConv_c(j) = info.hConv_c_2p;
         end  
         
     end

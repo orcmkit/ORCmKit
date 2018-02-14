@@ -16,7 +16,7 @@ function hfig = tightfig(hfig)
     % There can be an issue with tightfig when the user has been modifying
     % the contnts manually, the code below is an attempt to resolve this,
     % but it has not yet been satisfactorily fixed
-%     origwindowstyle = get(hfig, 'WindowStyle');
+    %origwindowstyle = get(hfig, 'WindowStyle');
     set(hfig, 'WindowStyle', 'normal');
     
     % 1 point is 0.3528 mm for future use
@@ -115,6 +115,6 @@ function hfig = tightfig(hfig)
 
     set(hfig, 'Units', origfigunits);
     
-%      set(hfig, 'WindowStyle', origwindowstyle);
-     
+    %set(hfig, 'WindowStyle', origwindowstyle);
+    set(hfig, 'Units','normalized','outerposition', [0 0 1 1]); 
 end

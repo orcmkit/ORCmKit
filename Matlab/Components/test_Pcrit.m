@@ -1,5 +1,6 @@
 function test_Pcrit
 clc
+
 % case study
 fluid = 'R245fa';
 T_su = 150+273.15;
@@ -10,7 +11,7 @@ s_su = CoolProp.PropsSI('S','T', T_su, 'P',P_su,fluid);
 rho_su = CoolProp.PropsSI('D','T', T_su, 'P',P_su,fluid);
 A_thr = 1e-5;
 
-% % Method 1 : gamma
+% % Method 1 : fictive gamma
 f_gamma = @(x) gamma_fct(x, P_ex, P_su, s_su, rho_su, fluid);
 lb = 0.1;
 ub = 2;
@@ -18,7 +19,7 @@ gamma = zeroBrent ( lb, ub, 1e-6, 1e-6, f_gamma );
 P_thr_1 = max(P_ex, P_su *(2/(gamma+1))^(gamma/(gamma-1)));
 rho_thr_1 = CoolProp.PropsSI('D','P',P_thr_1,'S',s_su,fluid);
 C_thr_1 = sqrt(2*(h_su - CoolProp.PropsSI('H','P',P_thr_1,'S',s_su,fluid)));
-M_dot_leak_1= A_thr*C_thr_1*rho_thr_1;
+M_dot_thr_1= A_thr*C_thr_1*rho_thr_1;
 
 
 % Method 2: speed of sound
@@ -32,12 +33,12 @@ P_crit_2 = CoolProp.PropsSI('P','H',h_crit_2,'S',s_su,fluid);
 P_thr_2 = max(P_ex,P_crit_2);
 rho_thr_2 = CoolProp.PropsSI('D','P',P_thr_2,'S',s_su,fluid);
 C_thr_2 = sqrt(2*(h_su - CoolProp.PropsSI('H','P',P_thr_2,'S',s_su,fluid)));
-M_dot_leak_2 = A_thr*C_thr_2*rho_thr_2;
+M_dot_thr_2 = A_thr*C_thr_2*rho_thr_2;
 
 disp(['[P_thr_1 = ' num2str(P_thr_1) '- P_thr_2 = ' num2str(P_thr_2) ']'])
 disp(['[C_thr_1 = ' num2str(C_thr_1) '- C_thr_2 = ' num2str(C_thr_2) ']'])
 disp(['[rho_thr_1 = ' num2str(rho_thr_1) '- rho_thr_2 = ' num2str(rho_thr_2) ']'])
-disp(['[M_dot_leak_1 = ' num2str(M_dot_leak_1) '- M_dot_leak_2 = ' num2str(M_dot_leak_2) ']'])
+disp(['[M_dot_thr_1 = ' num2str(M_dot_thr_1) '- M_dot_thr_2 = ' num2str(M_dot_thr_2) ']'])
 
 end
 
