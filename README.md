@@ -24,4 +24,4 @@ The ORCSim library in Python should be referenced as:
 
 For additional information or requests please contact:
 * Rémi Dickes - rdickes@ulg.ac.be
-* Davide Ziviani - davide.ziviani@ugent.be / dziviani@purdue.edu
+* Davide Ziviani - dziviani@purdue.edu
