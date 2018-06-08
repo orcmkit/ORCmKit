@@ -66,7 +66,9 @@ if nargin == 2
     
 end
 
-
+hold on
+load(['TS_prop_',fluid , '.mat'])
+plot(s_TS_curve, T_TS_curve-273.15, 'k', 'linewidth', param.LineWidth_orc+0.5)
 % Cold heat transfer fluid lines 
 if isfield(TS, 'CD')
     line_ctf =patchline(TS.CD.s_h, TS.CD.T_c-273.15, 'edgecolor',param.color_ctf, 'linestyle',param.LineStyle_ctf, 'linewidth',param.LineWidth_ctf,'edgealpha',param.alpha_ctf);
@@ -126,8 +128,6 @@ end
 if isfield(TS, 'LR')
     patchline([TS.LR.s(1) TS.LR.s(end)], [TS.LR.T(1) TS.LR.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
 end
-hold on
-load(['TS_prop_',fluid , '.mat'])
-plot(s_TS_curve, T_TS_curve-273.15)
+
 hold off
 end

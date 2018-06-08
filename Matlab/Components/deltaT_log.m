@@ -1,13 +1,10 @@
 function [DT_log, DTh, DTc ]= deltaT_log(Th_su, Th_ex, Tc_su, Tc_ex)
-tol_T = 1e-2;
-DTh = Th_su-Tc_ex;
-DTc = Th_ex-Tc_su;
-if DTh>-tol_T && DTc>-tol_T
-    if DTh ~= DTc;
-        DT_log = (DTh-DTc)/log(abs(DTh/DTc));
-    else
-        DT_log = DTh;
-    end
+% function that provides the mean logarithm temperature difference between two fluids
+DTh = max(Th_su-Tc_ex,1e-2);
+DTc = max(Th_ex-Tc_su,1e-2);
+if DTh ~= DTc;
+    DT_log = (DTh-DTc)/log(DTh/DTc);
 else
-    DT_log =1e-8;
+    DT_log = DTh;
+end
 end
