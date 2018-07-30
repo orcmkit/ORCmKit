@@ -209,8 +209,8 @@ for j = 1:length(out.H.T_vec)-1
                 
 
         end
-        %hConv_2phase_h = info.C_fit_h_2p*hConv_2phase_h;
-        %Nu_2phase_h = info.C_fit_h_2p*Nu_2phase_h;
+        hConv_2phase_h = info.C_fit*hConv_2phase_h;
+        Nu_1phase_h = info.C_fit*Nu_1phase_h;
         
         if strcmp(out.H.type_zone{j}, 'tp')
             out.H.hConv_vec(j) = hConv_2phase_h;
@@ -321,8 +321,8 @@ for j = 1:length(out.H.T_vec)-1
                 
         end
         
-        %hConv_1phase_c = info.C_fit_c_1p*hConv_1phase_c;
-        %Nu_1phase_c = info.C_fit_c_1p*Nu_1phase_c;
+        hConv_1phase_c = info.C_fit_c_1p*hConv_1phase_c;
+        Nu_1phase_c = info.C_fit_c_1p*Nu_1phase_c;
         
         if strcmp(out.C.type_zone{j}, 'liq') || strcmp(out.C.type_zone{j}, 'vap')
             out.C.hConv_vec(j) = hConv_1phase_c;

@@ -9,6 +9,7 @@ DTc = max(1e-8,Th_ex-Tc_su);
         DT_log = DTh;
     end
     DT_log = max(1e-5, DT_log);
+end
 %else
 %    DT_log =1e-5;
 %end

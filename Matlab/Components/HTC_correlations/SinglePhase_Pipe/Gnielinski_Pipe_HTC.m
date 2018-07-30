@@ -52,3 +52,5 @@ function Nu = Gnielinski_turbulent(Re, Pr) %source: VDI section G1 - 4.1, page 6
 f = (1.8*log10(Re)-1.5)^-2; %Konakov correlation
 Nu = ((f/8)*(Re-1000)*Pr)/(1+12.7*sqrt(f/8)*(Pr^(2/3)-1)); % Gnielinski
 end
+
+

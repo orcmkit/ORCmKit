@@ -1,4 +1,4 @@
-function [Q_dot_max, pinch_min] = HEX_Qdotmax_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, info, h_h_l, h_h_v, h_c_l, h_c_v)
+function [Q_dot_max, pinch_min] = HEX_Qdotmax_Solub_DP(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, DP_h, DP_c, info)
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
 
@@ -15,7 +15,7 @@ function [Q_dot_max, pinch_min] = HEX_Qdotmax_Solub(fluid_h, m_dot_h, P_h_su, in
 % See the documentation for further details or contact rdickes@ulg.ac.be
 
 %% MODELLING CODE
-%info.n_disc = 5;
+info.n_disc = 2;
 if strcmp(info.H.type,'H') && strcmp(info.C.type,'H') % CASE 1 : HOT FLUID AND COLD FLUID MIGHT EXPERIENCE A PHASE CHANGE
     T_h_min = 253.15;
     T_c_max = 463.15;
@@ -65,14 +65,14 @@ if strcmp(info.H.type,'H') && strcmp(info.C.type,'H') % CASE 1 : HOT FLUID AND C
     Q_dot_cext_max = m_dot_c*(h_c_ex_extmax-h_c_su);
     ub = min(Q_dot_cext_max, Q_dot_hext_max)*1.01;
     lb = 0;
-    f = @(x) pinch0_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, x, info, h_h_l, h_h_v, h_c_l, h_c_v);
+    f = @(x) pinch0_Solub_DP(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, x, DP_h, DP_c,  info);
     Q_dot_max = zeroBrent ( lb, ub, 1e-6, 1e-6, f );
     pinch_min = f(Q_dot_max);
 end
 
 end
 
-function err = pinch0_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v)
-out = HEX_profile_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, info, h_h_l, h_h_v, h_c_l, h_c_v);
+function err = pinch0_Solub_DP(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, DP_h, DP_c,  info)
+out = HEX_profile_Solub_DP(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, DP_h, DP_c , info);
 err = out.pinch;
 end

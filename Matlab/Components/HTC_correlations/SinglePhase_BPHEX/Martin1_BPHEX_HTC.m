@@ -33,7 +33,12 @@ else
     f_90 =39/Re^(0.289);
 end
 f = (((cos(theta))/sqrt(0.18*tan(theta) + 0.36*sin(theta) + f_0/cos(theta)))+((1-cos(theta))/(sqrt(3.8*f_90))))^(-2);
-Nu = 0.122*(Pr^0.33333333)*(mu_rat^0.16666666667)*(f*Re^2*sin(2*theta))^(0.374);
+if Pr > 1
+    n_murat = 0.16666666667;
+else
+    n_murat = 0;
+end
+Nu = 0.122*(Pr^0.33333333)*(mu_rat^n_murat)*(f*Re^2*sin(2*theta))^(0.374);
 hConv = Nu*k/Dh;
 
 if Re >= Re_max || Re <= Re_min

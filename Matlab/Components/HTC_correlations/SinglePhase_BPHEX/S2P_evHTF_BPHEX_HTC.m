@@ -1,4 +1,4 @@
-function [hConv, Nu, flag] = DickesHTF_BPHEX_HTC(mu, mu_rat, Pr, k, G, Dh, disp_flag) % VERIFIED
+function [hConv, Nu, flag] = S2P_evHTF_BPHEX_HTC(mu, mu_rat, Pr, k, G, Dh, disp_flag) % VERIFIED
 
 % Function implementing the correlation of Dickes for HTFf low in the
 % evaporator of Sun2Power (BPHEX)

@@ -69,6 +69,8 @@ end
 hold on
 load(['TS_prop_',fluid , '.mat'])
 plot(s_TS_curve, T_TS_curve-273.15, 'k', 'linewidth', param.LineWidth_orc+0.5)
+%plot(s_TS_curve, T_TS_curve-273.15, 'color', param.color_ts, 'linewidth', param.LineWidth_orc-0.5)
+
 % Cold heat transfer fluid lines 
 if isfield(TS, 'CD')
     line_ctf =patchline(TS.CD.s_h, TS.CD.T_c-273.15, 'edgecolor',param.color_ctf, 'linestyle',param.LineStyle_ctf, 'linewidth',param.LineWidth_ctf,'edgealpha',param.alpha_ctf);

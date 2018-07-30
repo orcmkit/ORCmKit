@@ -1,4 +1,4 @@
-function out = HEX_profile_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, param, h_h_l, h_h_v, h_c_l, h_c_v)
+function out = HEX_profile_Solub_DP(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot, DP_h, DP_c, param)%, h_h_l, h_h_v, h_c_l, h_c_v)
 
 %% CODE DESCRIPTION
 % ORCmKit - an open-source modelling library for ORC systems
@@ -45,15 +45,27 @@ function out = HEX_profile_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_d
 
 %% MODELLING CODE
 decim = 4; % degree of accuracy used for comparing the entalpies
-% Cell division for hot fluid (create a vector of enthalpy the different zones on the hot fluid side)
+
 h_h_su = in_h_su;
 h_h_ex = h_h_su - Q_dot/m_dot_h;
+P_h_ex = P_h_su - DP_h;
+
+h_c_su = in_c_su;
+h_c_ex = h_c_su + Q_dot/m_dot_c;
+P_c_ex = P_c_su - DP_c;
+
+% Define boundaries of two-phase for hot-fluid
+[h_h_l, h_h_v, P_h_l, P_h_v, flag_h_l_bd, flag_h_v_bd] = find_2P_boundaries(fluid_h, h_h_su, h_h_ex, P_h_su, P_h_ex, param.H);
+
+% Define boundaries of liquid-phase for cold fluid
+[h_c_l, h_c_v, P_c_l, P_c_v, flag_c_l_bd, flag_c_v_bd] = find_2P_boundaries(fluid_c, h_c_su, h_c_ex, P_c_su, P_c_ex, param.C);
+
+% Cell division for hot fluid (create a vector of enthalpy the different zones on the hot fluid side)
 H_h_vec_disc = sort([linspace(h_h_ex, h_h_su, param.n_disc) h_h_l h_h_v]);
 H_h_vec = unique(H_h_vec_disc(not(H_h_vec_disc<h_h_ex | H_h_vec_disc>h_h_su)));
 
 % Cell division for cold fluid (create a vector of enthalpy the different zones on the cold fluid side)
-h_c_su = in_c_su;
-h_c_ex = h_c_su + Q_dot/m_dot_c;
+
 H_c_vec_disc = sort([linspace(h_c_su, h_c_ex, param.n_disc) h_c_l h_c_v]);
 H_c_vec = unique(H_c_vec_disc(not(H_c_vec_disc>h_c_ex | H_c_vec_disc<h_c_su)));
 
@@ -74,8 +86,14 @@ end
 Q_dot_vec = m_dot_h*diff(H_h_vec);
 out.x_flux = (H_h_vec-H_h_vec(1))./(H_h_vec(end)-H_h_vec(1));
 out.Qdot_vec = Q_dot_vec;
+
+if (H_c_vec(end)- H_c_vec(1))>0
+    X_c = (H_c_vec-H_c_vec(1))/(H_c_vec(end)- H_c_vec(1));
+    out.C.P_vec = (1-X_c)*P_c_su + X_c*P_c_ex;
+else
+    out.C.P_vec = linspace(P_c_su, P_c_ex, length(H_c_vec));
+end
 out.C.H_vec = H_c_vec;
-out.C.P_vec = P_c_su*ones(1,length(out.C.H_vec));
 out.C.T_vec = NaN*ones(1,length(out.C.H_vec));
 out.C.Tbubble_min_vec = NaN*ones(1,length(out.C.H_vec));
 out.C.Tsat_pure_vec = NaN*ones(1,length(out.C.H_vec));
@@ -100,8 +118,14 @@ for k = 1:length(out.C.H_vec)
         end
     end
 end
+
+if (H_h_vec(end)- H_h_vec(1))>0
+    X_h = (H_h_vec-H_h_vec(1))/(H_h_vec(end)- H_h_vec(1));
+    out.H.P_vec = (1-X_h)*P_h_ex + X_h*P_h_su;
+else
+    out.H.P_vec = linspace(P_h_ex, P_h_su, length(H_h_vec));
+end
 out.H.H_vec = H_h_vec;
-out.H.P_vec = P_h_su*ones(1,length(out.H.H_vec));
 out.H.T_vec = NaN*ones(1,length(out.H.H_vec));
 out.H.Tbubble_min_vec = NaN*ones(1,length(out.H.H_vec));
 out.H.Tsat_pure_vec = NaN*ones(1,length(out.H.H_vec));

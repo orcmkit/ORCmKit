@@ -3,7 +3,7 @@ close all
 clc
 
 %% RANGE OF REYNOLDS AND PRANDTL NUMBERS
-if 1
+if 0
     W = 0.191;
     L = 0.519-0.06;
     pitch_p = 0.0022;
@@ -66,12 +66,13 @@ if 1
     plot(Pr_htf_range, 'o')
 end
 
-%% BPHEX single-phase HTC comparison - R245FA
-
+%% BPHEX SINGLE-PHASE HTC comparison - R245FA
+if 0
 % Reference conditions
-P = 10e5;
-T = 70 +273.15;
+P = 5e5;
+T = 80 +273.15;
 fluid = 'R245fa';
+T_sat = CoolProp.PropsSI('T',        'Q', 0.5, 'P', P, fluid)-273.15;
 mu = CoolProp.PropsSI('V',        'T', T, 'P', P, fluid);
 mu_rat = 1;
 Pr = CoolProp.PropsSI('Prandtl',  'T', T, 'P', P, fluid);
@@ -120,7 +121,6 @@ for i_D = 1:length(Dh_vec)
     [hConv_Kim_D(i_D)           Nu_Kim_D(i_D)           flag_Kim_D(i_D)]=               Kim_BPHEX_HTC(mu,                   Pr, k, G_i, Dh_vec(i_D), theta_i,           disp_flag);
 end
 
-
 % influence of theta
 theta_vec = (30:1:60) ;
 for i_T = 1:length(theta_vec)
@@ -139,7 +139,7 @@ end
 
 % Figures
 col2eval = { 'Gnielinski', 'Thonon', 'Martin1', 'Wanniarachchi','Muley', 'Junqi','Kim'};%, 'Heavner',  'DesideriHTF',  'DittusBoelter',
-figure
+figure('Name', [num2str(T-273.15) ' - ' num2str(P/1e5)])
 subplot(1,3,1)
 hold on
 ii = 0;
@@ -187,7 +187,51 @@ legend(LT, legT, 'location', 'northwest')
 grid on
 xlabel('theta')
 ylabel('hConv')
+end
 
-
-
-%% BPHEX boiling HTC comparison
+%% BPHEX CONDESNEING HTC comparison
+if 1
+    P = 1e5;
+    fluid = 'R245fa';
+    x_i = 0.1;
+    T_sat = CoolProp.PropsSI('T',     'Q', 0.5, 'P', P, fluid)-273.15;
+    mu_l    = CoolProp.PropsSI('V',	'Q', 0, 'P', P, fluid);
+    k_l     = CoolProp.PropsSI('L',	'Q', 0, 'P', P, fluid);
+    Pr_l = CoolProp.PropsSI('Prandtl',  'Q', 0, 'P', P, fluid);
+    rho_l = CoolProp.PropsSI('D',  'Q', 0, 'P', P, fluid);
+    rho_v = CoolProp.PropsSI('D',  'Q', 1, 'P', P, fluid);
+    i_fg = CoolProp.PropsSI('H',  'Q', 1, 'P', P, fluid) - CoolProp.PropsSI('H',  'Q', 0, 'P', P, fluid);
+    p_star = P/CoolProp.PropsSI('Pcrit',  'Q', 1, 'P', P, fluid);
+    m_dot = 0.09;
+    
+    L = 0.250-0.028757;
+    W = 0.1128;
+    pitch_p = 0.00231;
+    th_p = 0.0003;
+    b = pitch_p-th_p;
+    phi = 1.1620;
+    Dh_i = 2*b/phi;
+    N_c = 20;
+    theta_i = 60*pi/180;
+    pitch_co_i = 7.45870973/1000;
+    disp_flag = 0;
+    G_i = m_dot/N_c/(W*b);
+    
+    
+    % Impact of quality
+    x_vec = 0.00001:0.03:0.999;
+    for i_x = 1:length(x_vec)
+        [h_Han_X(i_x),      Nu_Han_X(i_x),      flag_Han_X(i_x)]  =     Han_Cond_BPHEX_HTC(x_vec(i_x), mu_l, k_l, Pr_l, rho_l, rho_v, G_i, Dh_i, pitch_co_i, theta_i, disp_flag);
+        [h_Longo_X(i_x),    Nu_Longo_X(i_x),    flag_Longo_X(i_x)]  = Longo_Cond_BPHEX_HTC(x_vec(i_x), mu_l, k_l, Pr_l, rho_l, rho_v, i_fg, G_i, Dh_i, 2,    phi, L, disp_flag);
+        [h_Shah_X(i_x),     Nu_Shah_X(i_x),     flag_Shah_X(i_x)]   = Shah_Cond_pipe_HTC(x_vec(i_x), mu_l, k_l, Pr_l, p_star, G_i, Dh_i, disp_flag);
+    
+    end
+    
+    figure
+    hold on
+    plot(x_vec, h_Han_X, 'o')
+    plot(x_vec, h_Longo_X, 'o')
+    plot(x_vec, h_Shah_X, 'o')
+    hold off
+    legend('Han', 'Longo', 'Shah')
+end

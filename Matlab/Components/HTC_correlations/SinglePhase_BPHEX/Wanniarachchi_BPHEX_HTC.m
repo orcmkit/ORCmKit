@@ -24,7 +24,12 @@ Re = G*Dh/mu;
 m = 0.646+0.00111*theta_bis;
 j_Nu_t = 12.6*theta_bis^(-1.142)*phi^(1-m)*Re^(m);
 j_Nu_l = 3.65*theta_bis^(-0.455)*phi^0.661*Re^(0.339);
-Nu = (j_Nu_l^3 + j_Nu_t^3)^(1/3)*Pr^(1/3)*mu_rat^(0.17);
+if Pr > 1
+    n_murat = 0.17;
+else
+    n_murat = 0;
+end
+Nu = (j_Nu_l^3 + j_Nu_t^3)^(1/3)*Pr^(1/3)*mu_rat^(n_murat);
 hConv = Nu*k/Dh;
 
 if Re >= Re_max || Re <= Re_min
