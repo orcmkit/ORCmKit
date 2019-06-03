@@ -12,13 +12,12 @@ if strcmp(param.type,'H')
             %[T_su, ~, ~, ~, ~, ~, ~, ~] = HP_solubMixt(param.C_oil, P_su, in_su, fluid, param.fluid_lub, T_min_bubble, T_sat_pure);
             [T_su, ~, ~, ~, ~, ~, ~, ~] = HP_solubMixt(param.C_oil, P_su, in_su, fluid, param.fluid_lub, T_min_bubble, T_sat_pure, param.fit_DTP_zeta);
 
-            h_l = (1-param.C_oil)*CoolProp.PropsSI('H', 'T', T_min_bubble, 'Q', 0, fluid) + param.C_oil*PropsSI_ICP('H', 'T', T_min_bubble, 'P', P_su, param.fluid_lub);
-            if param.C_oil < 1e-4
-                x_dryout_cpt = 0.999;
+            h_l = (1-param.C_oil)*CoolProp.PropsSI('H', 'T', T_min_bubble, 'Q', 0, fluid) + param.C_oil*PropsSI_ICP('H', 'T', T_min_bubble, 'P', P_su, param.fluid_lub);   
+            if R245fa_POE_Tbubble((1- param.x_lim_vap - param.C_oil + param.x_lim_vap*param.C_oil)/(1- param.x_lim_vap + param.x_lim_vap*param.C_oil), P_su, T_sat_pure) > (155+273.15)
+                h_v = inf;
             else
-                x_dryout_cpt = 0.98;
+                [~, h_v, ~, ~, ~, ~, ~, ~] = xP_solubMixt(param.C_oil, P_su, param.x_lim_vap, fluid, param.fluid_lub, T_min_bubble, T_sat_pure, param.fit_DTP_zeta);
             end
-            [~, h_v, ~, ~, ~, ~, ~, ~] = xP_solubMixt(param.C_oil, P_su, x_dryout_cpt, fluid, param.fluid_lub, T_min_bubble, T_sat_pure, param.fit_DTP_zeta);
         else
             T_su = CoolProp.PropsSI('T','H', in_su, 'P', P_su, fluid);
             h_l = CoolProp.PropsSI('H','P',P_su,'Q',0,fluid);

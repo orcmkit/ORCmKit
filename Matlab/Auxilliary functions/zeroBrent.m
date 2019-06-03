@@ -1,7 +1,5 @@
-function value = zeroBrent ( a, b, machep, t, f )
+function [value, f_out] = zeroBrent ( a, b, machep, t, f , tol_f) %addon Rémi DICKES  26/11/2018
 
-%*****************************************************************************80
-%
 %% ZERO seeks the root of a function F(X) in an interval [A,B].
 %
 %  Discussion:
@@ -50,6 +48,9 @@ function value = zeroBrent ( a, b, machep, t, f )
 %    Input, real value = F ( x ), the name of a user-supplied
 %    function which evaluates the function whose zero is being sought.
 %
+%
+%   Input, real tol_f, error tolerance targeted on F, addon Rémi DICKES  26/11/2018
+%
 %    Output, real VALUE, the estimated value of a zero of
 %    the function F.
 %
@@ -61,14 +62,16 @@ function value = zeroBrent ( a, b, machep, t, f )
   sb = b;
   fa = f ( sa );
   
-  if fa == 0 %addon Rémi DICKES 07/02/2017
+  if (fa == 0 || abs(fa) < tol_f) %addon Rémi DICKES 07/02/2017
       value = sa; %addon Rémi DICKES 07/02/2017
+      f_out = fa;
       return %addon Rémi DICKES 07/02/2017
   end %addon Rémi DICKES 07/02/2017
   
   fb = f ( sb );
-  if fb == 0 %addon Rémi DICKES 07/02/2017
+  if (fb == 0 || abs(fb) < tol_f) %addon Rémi DICKES 07/02/2017
       value = sb; %addon Rémi DICKES 07/02/2017
+      f_out = fb;
       return %addon Rémi DICKES 07/02/2017
   end %addon Rémi DICKES 07/02/2017
   
@@ -93,11 +96,11 @@ function value = zeroBrent ( a, b, machep, t, f )
     tol = 2.0 * machep * abs ( sb ) + t;
     m = 0.5 * ( c - sb );
 
-    if ( abs ( m ) <= tol | fb == 0.0 )
+    if ( abs ( m ) <= tol || fb == 0.0 || abs(fb) < tol_f ) %addon Rémi DICKES  26/11/2018
       break
     end
 
-    if ( abs ( e ) < tol | abs ( fa ) <= abs ( fb ) )
+    if ( abs ( e ) < tol || abs ( fa ) <= abs ( fb ) )
 
       e = m;
       d = e;
@@ -129,7 +132,7 @@ function value = zeroBrent ( a, b, machep, t, f )
       s = e;
       e = d;
 
-      if ( 2.0 * p < 3.0 * m * q - abs ( tol * q ) & p < abs ( 0.5 * s * q ) )
+      if ( 2.0 * p < 3.0 * m * q - abs ( tol * q ) && p < abs ( 0.5 * s * q ) )
         d = p / q;
       else
         e = m;
@@ -151,7 +154,7 @@ function value = zeroBrent ( a, b, machep, t, f )
 
     fb = f ( sb );
 
-    if ( ( 0.0 < fb & 0.0 < fc ) | ( fb <= 0.0 & fc <= 0.0 ) )
+    if ( ( 0.0 < fb && 0.0 < fc ) || ( fb <= 0.0 && fc <= 0.0 ) )
       c = sa;
       fc = fa;
       e = sb - sa;
@@ -159,8 +162,8 @@ function value = zeroBrent ( a, b, machep, t, f )
     end
 
   end
-
+  
   value = sb;
-
+  f_out = fb; %addon Rémi DICKES  26/11/2018
   return
 end

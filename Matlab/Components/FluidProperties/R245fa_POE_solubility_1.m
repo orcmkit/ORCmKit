@@ -1,4 +1,4 @@
-function [ zeta_r, res_zeta_r] = R245fa_POE_solubility(T_K, P_Pa, Tsat_pure_K)
+function [ zeta_r, res_zeta_r] = R245fa_POE_solubility_1(T_K, P_Pa, Tsat_pure_K)
 % RDickes - 11/04/2018
 % Impletement correlations from Grebner, tuned with Zhelny's data 
 

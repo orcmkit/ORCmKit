@@ -69,8 +69,8 @@ end
 %% BPHEX SINGLE-PHASE HTC comparison - R245FA
 if 0
 % Reference conditions
-P = 5e5;
-T = 80 +273.15;
+P = 10e5;
+T = 50 +273.15;
 fluid = 'R245fa';
 T_sat = CoolProp.PropsSI('T',        'Q', 0.5, 'P', P, fluid)-273.15;
 mu = CoolProp.PropsSI('V',        'T', T, 'P', P, fluid);
@@ -78,15 +78,18 @@ mu_rat = 1;
 Pr = CoolProp.PropsSI('Prandtl',  'T', T, 'P', P, fluid);
 k  = CoolProp.PropsSI('L',        'T', T, 'P', P, fluid);
 m_dot = 0.08;
-W = 0.191;
-L = 0.519-0.06;
-pitch_p = 0.0022;
-th_p = 0.0004;
-b = pitch_p-th_p;
-phi = 1.1407;
-Dh_i = 2*b/phi;
-N_c = 50;
-theta_i = 45*pi/180;
+ L = 0.519-0.0603;
+ W = 0.191;
+ pitch_p = 2.2/1000;
+ th_p = 0.4/1000;
+ b = pitch_p-th_p;
+ phi = 1.1414;
+ Dh_i = 2*b/phi;
+ N_c = 50;
+ theta_i = 60*pi/180;
+ pitch_co = 7.19360908/1000;
+ 
+
 disp_flag = 0;
 G_i = m_dot/N_c/(W*b);
 
@@ -191,7 +194,7 @@ end
 
 %% BPHEX CONDESNEING HTC comparison
 if 1
-    P = 1e5;
+    P = 4e5;
     fluid = 'R245fa';
     x_i = 0.1;
     T_sat = CoolProp.PropsSI('T',     'Q', 0.5, 'P', P, fluid)-273.15;
@@ -202,7 +205,7 @@ if 1
     rho_v = CoolProp.PropsSI('D',  'Q', 1, 'P', P, fluid);
     i_fg = CoolProp.PropsSI('H',  'Q', 1, 'P', P, fluid) - CoolProp.PropsSI('H',  'Q', 0, 'P', P, fluid);
     p_star = P/CoolProp.PropsSI('Pcrit',  'Q', 1, 'P', P, fluid);
-    m_dot = 0.09;
+    m_dot = 0.12;
     
     L = 0.250-0.028757;
     W = 0.1128;
@@ -234,4 +237,124 @@ if 1
     plot(x_vec, h_Shah_X, 'o')
     hold off
     legend('Han', 'Longo', 'Shah')
+end
+
+%% TUBE CONDESNEING HTC comparison
+if 0
+    P = 3e5;
+    fluid = 'R245fa';
+    x_i = 0.1;
+    T_sat = CoolProp.PropsSI('T',     'Q', 0.5, 'P', P, fluid)-273.15;
+    mu_l    = CoolProp.PropsSI('V',	'Q', 0, 'P', P, fluid);
+    mu_v    = CoolProp.PropsSI('V',	'Q', 1, 'P', P, fluid);
+    k_l     = CoolProp.PropsSI('L',	'Q', 0, 'P', P, fluid);
+    Pr_l = CoolProp.PropsSI('Prandtl',  'Q', 0, 'P', P, fluid);
+    rho_l = CoolProp.PropsSI('D',  'Q', 0, 'P', P, fluid);
+    rho_v = CoolProp.PropsSI('D',  'Q', 1, 'P', P, fluid);
+    i_fg = CoolProp.PropsSI('H',  'Q', 1, 'P', P, fluid) - CoolProp.PropsSI('H',  'Q', 0, 'P', P, fluid);
+    p_star = P/CoolProp.PropsSI('Pcrit',  'Q', 1, 'P', P, fluid);
+    m_dot = 0.06;
+      
+    Dh_i = 0.0085;
+    N_c = 13;
+    G_i = m_dot/N_c/(pi/4*Dh_i^2);
+    DT_wall_i = 10;
+    disp_flag = 0;
+    
+    % Impact of quality
+    x_vec = 0.00001:0.03:0.999;
+    for i_x = 1:length(x_vec)
+        [h_Cav_X(i_x),      Nu_Cav_X(i_x),      flag_Cav_X(i_x)]  =     Cavallini_Cond_pipe_HTC(x_vec(i_x), mu_l, mu_v, rho_l, rho_v, k_l, Pr_l, i_fg, DT_wall_i, G_i, Dh_i, disp_flag) ;
+        [h_Shah_X(i_x),     Nu_Shah_X(i_x),     flag_Shah_X(i_x)]   =   Shah_Cond_pipe_HTC(x_vec(i_x), mu_l, k_l, Pr_l, p_star, G_i, Dh_i, disp_flag);   
+    end
+    
+    figure
+    hold on
+    plot(x_vec, h_Cav_X, 'o')
+    plot(x_vec, h_Shah_X, 'o')
+    hold off
+    legend('Cav', 'Shah')
+    
+    % Impact of wall temperature
+    DT_vec = 1:1:10;
+    figure
+    hold on
+    for i_x = 1:length(x_vec)
+        [h_Shah_X(i_x),     Nu_Shah_X(i_x),     flag_Shah_X(i_x)]   =   Shah_Cond_pipe_HTC(x_vec(i_x), mu_l, k_l, Pr_l, p_star, G_i, Dh_i, disp_flag);
+    end
+    plot(x_vec, h_Shah_X, 'o')
+    for i_DT = 1:length(DT_vec)
+        for i_x = 1:length(x_vec)           
+            [h_Cav_X(i_x),      Nu_Cav_X(i_x),      flag_Cav_X(i_x)]  =     Cavallini_Cond_pipe_HTC(x_vec(i_x), mu_l, mu_v, rho_l, rho_v, k_l, Pr_l, i_fg, DT_vec(i_DT), G_i, Dh_i, disp_flag) ;
+        end
+        plot(x_vec, h_Cav_X, 'o')
+        clearvars h_Cav_X Nu_Cav_X flag_Cav_X
+    end
+    
+    
+end
+
+%% BPHEX BOILING HTC comparison
+if 0
+    P = 10e5;
+    fluid = 'R245fa';
+    x_i = 0.1;
+    T_sat = CoolProp.PropsSI('T',     'Q', 0.5, 'P', P, fluid)-273.15;
+    mu_l    = CoolProp.PropsSI('V',	'Q', 0, 'P', P, fluid);
+    mu_v    = CoolProp.PropsSI('V',	'Q', 1, 'P', P, fluid);
+    k_l     = CoolProp.PropsSI('L',	'Q', 0, 'P', P, fluid);
+    Pr_l = CoolProp.PropsSI('Prandtl',  'Q', 0, 'P', P, fluid);
+    rho_l = CoolProp.PropsSI('D',  'Q', 0, 'P', P, fluid);
+    rho_v = CoolProp.PropsSI('D',  'Q', 1, 'P', P, fluid);    
+    i_fg = CoolProp.PropsSI('H',  'Q', 1, 'P', P, fluid) - CoolProp.PropsSI('H',  'Q', 0, 'P', P, fluid);
+    p_star = P/CoolProp.PropsSI('Pcrit',  'Q', 1, 'P', P, fluid);
+    m_dot = 0.09;       
+    
+    L = 0.519-0.0603;
+    W = 0.191;
+    pitch_p = 2.2/1000;
+    th_p = 0.4/1000;
+    b = pitch_p-th_p;
+    phi = 1.1414;
+    Dh_i = 2*b/phi;
+    N_c = 50;
+    theta_i = 60*pi/180;
+    pitch_co = 7.19360908/1000;
+    disp_flag = 0;
+    G_i = 55; %m_dot/N_c/(W*b);
+    
+    Qdot = 1000; 
+    DTlog = 15;
+    h_conv_h = 400;
+
+    % Impact of quality
+    figure
+    hold on
+    x_vec = 0.00001:0.03:0.999;
+    for i_x = 1:length(x_vec)
+        rho = CoolProp.PropsSI('D',  'Q', x_vec(i_x), 'P', P, fluid);
+        P_crit = CoolProp.PropsSI('Pcrit', 'Q', 1, 'P', P, fluid);
+        sigma = CoolProp.PropsSI('I',  'Q', x_vec(i_x), 'P', P, fluid);
+        sigma_l = CoolProp.PropsSI('I', 'Q', 0, 'P', 0.1*P_crit, fluid)*1000; %mN/m
+        %k = CoolProp.PropsSI('L',	'Q',  x_vec(i_x), 'P', P, fluid);
+        p_star = P/P_crit;
+        M = 1e3*CoolProp.PropsSI('M', 'Q', 1, 'P', P, fluid);
+        [h_HanB_X(i_x),    	Nu_HanB_X(i_x),     flag_HanB_X(i_x)]    = 	Han_Boiling_BPHEX_HTC(x_vec(i_x), mu_l, k_l, Pr_l, rho_l, rho_v,  i_fg, G_i, DTlog, Qdot, h_conv_h, Dh_i, theta_i, pitch_co, disp_flag);
+        [h_Amalfi_X(i_x),  	Nu_Amalfi_X(i_x),	flag_Amalfi_X(i_x)]	 = 	Amalfi_Boiling_BPHEX_HTC(x_vec(i_x), rho_l, rho_v, rho, mu_v, mu_l, k_l, sigma, i_fg, G_i, Dh_i, theta_i, Qdot, DTlog, h_conv_h, disp_flag);
+        [h_Junqi_X(i_x),   	Nu_Junqi_X(i_x),  	flag_Junqi_X(i_x)]   =	Junqi_Boiling_BPHEX_HTC(x_vec(i_x), mu_l, k_l, Pr_l, rho_l, rho_v,  i_fg, G_i, DTlog, Qdot, h_conv_h, Dh_i, disp_flag);
+        [h_Cooper_X(i_x),  	Nu_Cooper_X(i_x),  	flag_Cooper_X(i_x)]  =	Cooper_Boiling_HTC(Dh_i, k_l, P, P_crit, M, h_conv_h, DTlog, Qdot);
+        [h_Longo_X(i_x),  	Nu_Longo_X(i_x),  	flag_Longo_X(i_x)]   =  Longo_Boiling_BPHEX_HTC(x_vec(i_x), k_l, rho_l, Pr_l, mu_l, rho_v, P_crit, p_star, sigma_l, G_i, Dh_i, phi, h_conv_h, DTlog, Qdot, fluid);
+        %[h_Desideri_X(i_x),	Nu_Desideri_X(i_x),	flag_Desideri_X(i_x)]=  Desideri_Boiling_BPHEX_HTC(x_vec(i_x), rho_l, rho_v, rho, mu_l, k_l, sigma, G_i, Dh_i, disp_flag);
+    end
+    
+    figure
+    hold on
+    plot(x_vec, h_HanB_X, 'o')
+    plot(x_vec, h_Amalfi_X, 'o')
+    plot(x_vec, h_Junqi_X, 'o')
+    plot(x_vec, h_Cooper_X, 'o')
+    plot(x_vec, h_Longo_X, 'o')
+    %plot(x_vec, h_Desideri_X, 'o')
+    hold off
+    legend('Han', 'Amalfi', 'Junqi', 'Cooper', 'Longo')%, 'Desideri')
 end

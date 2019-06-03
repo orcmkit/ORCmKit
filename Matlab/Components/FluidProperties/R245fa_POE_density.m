@@ -10,7 +10,7 @@ if T_K >= Tbubble_min_K % The temperature is sufficiently high to permit a vapou
     rho_rl= CoolProp.PropsSI('D', 'T', T_K, 'Q', 0, fluid_r);
     rho_oil = PropsSI_ICP('D', 'T',T_K, 'P', P_Pa, fluid_lub);
     rho_ideal = rho_oil/(1+zeta_r*(rho_oil/rho_rl-1));
-    K = fit_ratio_rho(T_K, max(1e-4, min(0.9999,zeta_r)));
+    K = fit_ratio_rho(max(285,min(T_K,422)), max(1e-4, min(0.9999,zeta_r)));
     rho_liq = rho_ideal/K;
     
 else  % The temperature is too low and there is only a liquid phase
@@ -19,14 +19,11 @@ else  % The temperature is too low and there is only a liquid phase
     else
         rho_rl = CoolProp.PropsSI('D', 'T', T_K, 'P', P_Pa, fluid_r);
     end
-    rho_vap = 0;
+    rho_vap = CoolProp.PropsSI('D', 'T', T_K, 'Q', 1, fluid_r); %0;
     rho_oil = PropsSI_ICP('D', 'T',T_K, 'P', P_Pa, fluid_lub);
     rho_ideal = rho_oil/(1+zeta_r*(rho_oil/rho_rl-1));
-    K = fit_ratio_rho(T_K, max(1e-4, min(0.9999,zeta_r)));
+    K = fit_ratio_rho(max(285,min(T_K,422)), max(1e-4, min(0.9999,zeta_r)));
     rho_liq = rho_ideal/K;
 end
-%if isnan(K)
-%    disp(['fit_ratio_rho(' num2str(T_K) ', min(0.999,' num2str(zeta_r) '))'])
-%end
 
 end

@@ -228,6 +228,7 @@ if P_su > P_ex %&& h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
             options = optimset('Display','off');
             [x, ~, flag] = fsolve(@(x)  FCT_Exp2_SemiEmp_res(x, ub, fluid, P_su, h_su, M_dot, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param, s_su, rho_su, h_ex_s), x0./ub, options);
             x = x.*ub;
+            T_w = x;
             int = FCT_Exp2_SemiEmp(x,fluid, P_su, h_su, M_dot, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param, s_su, rho_su, h_ex_s);
             N_exp = int.N_exp;
             W_dot = int.W_dot;
@@ -249,6 +250,7 @@ else
 end
 
 if out.flag > 0;
+    out.T_w = T_w;
     out.h_ex = h_ex;
     out.N_exp = N_exp;
     out.W_dot = W_dot;
@@ -259,6 +261,7 @@ if out.flag > 0;
     out.M = (rho_su+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;   
 
 else    
+    out.T_w = NaN;
     out.N_exp = 60*M_dot/(param.V_s*rho_su);
     out.FF = 1;
     out.W_dot = M_dot*(h_su-h_ex_s);

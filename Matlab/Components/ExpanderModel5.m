@@ -260,6 +260,7 @@ if P_su > P_ex && h_su > CoolProp.PropsSI('H','P',P_su,'Q',0.1,fluid);
             x = x.*ub;
             int = Exp_SemiEmp(x(1), x(2), fluid, P_su, h_su, N_exp, param.V_s, param.r_v_in, P_ex, param.A_leak0, param.d_su, param.alpha, param.W_dot_loss_0, param.AU_su_n, param.M_dot_n, param.AU_ex_n, param.AU_amb, T_amb, param.C_loss, param.h_min, param.h_max, param);
             M_dot = x(1);
+            T_w = int.T_w;
             W_dot = int.W_dot;
             h_ex = int.h_ex;
             epsilon_is = int.epsilon_is;
@@ -280,6 +281,7 @@ else
 end
 
 if out.flag > 0;
+    out.T_w = T_w;
     out.h_ex = h_ex;
     out.M_dot = M_dot;
     out.W_dot = W_dot;
@@ -289,6 +291,7 @@ if out.flag > 0;
     out.T_ex = CoolProp.PropsSI('T','P',P_ex,'H',out.h_ex,fluid);
     out.M = (CoolProp.PropsSI('D','H',h_su,'P',P_su,fluid)+CoolProp.PropsSI('D','H',out.h_ex,'P',P_ex,fluid))/2*param.V;    
 else    
+    out.T_w = NaN;
     out.M_dot = N_exp/60*param.V_s*rho_su;
     out.FF = 1;
     out.W_dot = out.M_dot*(h_su-h_ex_s);
@@ -423,7 +426,7 @@ out.epsilon_ex1 = max(0,(1-exp(-AU_ex1/(M_dot*out.cp_ex1))));
 out.Q_dot_ex = max(0,out.epsilon_ex1*M_dot*out.cp_ex1*(T_w-out.T_ex1));
 out.h_ex = min(out.h_ex1 + out.Q_dot_ex/M_dot,h_max);
 out.Q_dot_amb = AU_amb*(T_w-T_amb);
-out.resE = abs((out.Q_dot_su + out.W_dot_loss - out.Q_dot_ex - out.Q_dot_amb)/(out.Q_dot_su + out.W_dot_loss));
+out.resE =  abs((out.Q_dot_su + out.W_dot_loss - out.Q_dot_ex - out.Q_dot_amb)/(out.Q_dot_su + out.W_dot_loss));
 % out.resE = abs((out.Q_dot_su  - out.Q_dot_ex - out.Q_dot_amb)/(out.Q_dot_ex+out.Q_dot_amb));
 
 if out.M_dot_leak_bis == 0 && out.M_dot_leak == 0
@@ -436,5 +439,7 @@ else
     out.resMlk = abs((out.M_dot_leak - out.M_dot_leak_bis)/out.M_dot_leak_bis);
 end
 out.T_w = T_w;
+
+
 end
 

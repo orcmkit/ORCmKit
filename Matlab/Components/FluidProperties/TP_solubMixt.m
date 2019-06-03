@@ -10,11 +10,11 @@ if T_K > Tbubble_min_K % liquid + two-phase
         x = (1-zeta_r-C_oil)/(1-zeta_r-C_oil+zeta_r*C_oil);
         C_rl = (1-x)*(1-C_oil);
         C_rv = x*(1-C_oil);
-        h_rl = CoolProp.PropsSI('H', 'T', T_K, 'Q', 0, fluid_r);
+        h_rl = CoolProp.PropsSI('H', 'T', min(150+273.15,T_K), 'Q', 0, fluid_r);
         if abs(T_K-Tsat_pure_K)<1e-3
-            h_rv = CoolProp.PropsSI('H', 'T', T_K, 'Q', 1, fluid_r);
+            h_rv = CoolProp.PropsSI('H', 'T', min(150+273.15,T_K), 'Q', 1, fluid_r);
         else
-            h_rv = CoolProp.PropsSI('H', 'T', T_K, 'P', P_Pa, fluid_r);
+            h_rv =CoolProp.PropsSI('H', 'T', T_K, 'P', P_Pa, fluid_r);
         end
         h_oil =  PropsSI_ICP('H', 'T', T_K, 'P', P_Pa, fluid_lub);
         h_mix = C_rl*h_rl + C_rv*h_rv + C_oil*h_oil;
@@ -32,7 +32,7 @@ if T_K > Tbubble_min_K % liquid + two-phase
 else % liquid-only
     
     if T_K >= Tsat_pure_K-1e-2
-        h_rl = CoolProp.PropsSI('H', 'T', T_K, 'Q', 0, fluid_r);
+        h_rl = CoolProp.PropsSI('H', 'T', min(150+273.15,T_K), 'Q', 0, fluid_r);
     else
         h_rl = CoolProp.PropsSI('H', 'T', T_K, 'P', P_Pa, fluid_r);
     end
@@ -46,3 +46,4 @@ else % liquid-only
 end
 
 end
+

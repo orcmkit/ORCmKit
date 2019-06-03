@@ -1,13 +1,33 @@
 function alpha = VoidFraction_Hughmark(q, rho_v, rho_l, mu_v, mu_l, D, G)
 alpha = NaN*ones(size(q));
-
+qmin = 0.001;
+qmax = 0.99;
 for i = 1:length(q)
     
-    q1 = max(0.001, min(0.99,q(i)));
+    %q1 = min(0.99, max(0.001,q(i)));
+    %     if q1 <0.001
+    %         alpha(i) = 0;
+    %     elseif q1 > 0.99
+    %         alpha(i) = 1;
+    %     else
+    if q(i) > qmin && q(i) < qmax
+        q1 = q(i);
+    elseif q(i) <= qmin
+        q1 = qmin;
+    elseif q(i) >= qmax
+        q1 = qmax;
+    end
     beta = VoidFraction_homogenous(q1, rho_v, rho_l);
     f = @(x) residualVoidFraction_Hughmark(x,q1, beta, rho_v, mu_v, mu_l, D, G);
-    alpha(i) = zeroBrent (0, 1, 1e-8, 1e-8, f );
-    res_alpha = f(alpha(i));
+    [alpha1,res_alpha] = zeroBrent (0, 1, 1e-8, 1e-8, f, 1e-5 );
+    if q(i) > qmin && q(i) < qmax
+        alpha(i) = alpha1;
+    elseif q(i) <= qmin
+        alpha(i) = q(i)/qmin*alpha1;
+    elseif q(i) >= qmax
+        alpha(i) = ((1-q(i))/(1-q1))*alpha1 + ((q(i) - q1)/(1-q1))*1;
+    end
+
     if abs(res_alpha) > 5e-2
         alpha(i) = 1;
         display(['Error in Hughmark void fraction model, residual : ' num2str(res_alpha)])
@@ -19,6 +39,7 @@ for i = 1:length(q)
         disp(['D = ' num2str(D)]);
         disp(['G = ' num2str(G)]);
     end
+%end
 end
 end
 

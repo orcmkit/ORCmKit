@@ -106,10 +106,10 @@ if not(isfield(param, 'displayResults'))
 end
 
 if not(isfield(param,'h_min'))
-    param.h_min =  CoolProp.PropsSI('H','P',5e4,'T',253.15,fluid);
+    param.h_min =  CoolProp.PropsSI('H','P',4e6,'T',253.15,fluid);
 end
 if not(isfield(param,'h_max'))
-    param.h_max =  CoolProp.PropsSI('H','P',4e6,'T',500,fluid);
+    param.h_max =  CoolProp.PropsSI('H','P',1e4,'T',500,fluid);
 end
 if not(isfield(param,'V'))
     param.V =  0;
@@ -180,7 +180,7 @@ if P_su < P_ex && N_pp > 0
             epsilon_is = (m_dot*(h_ex_s-h_su))/W_dot;
             AU = param.AU;
             Q_dot = AU*(T_su - T_amb);
-            h_ex = h_su+(W_dot-Q_dot)/m_dot;
+            h_ex = 1/param.eta_hyd*(h_ex_s-h_su*(1-param.eta_hyd));%h_su+(W_dot-Q_dot)/m_dot;
             if h_ex > param.h_min && h_ex < param.h_max
                 out.flag = 1;
             else
@@ -210,7 +210,7 @@ else
     out.h_ex = h_su;
     h_ex_s = CoolProp.PropsSI('H','P',P_ex,'S',s_su,fluid);
     out.m_dot = N_pp/60* param.V_s*rho_su;
-    out.W_dot = m_dot*(h_ex_s-h_su);
+    out.W_dot = out.m_dot*(h_ex_s-h_su);
     out.Q_dot = 0;
     out.epsilon_is = 1;
     out.epsilon_vol = 1;

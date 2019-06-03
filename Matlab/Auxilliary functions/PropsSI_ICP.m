@@ -45,10 +45,10 @@ elseif strcmp(fluid, 'ICP_RL_32_3MAF')
     end
 
     cp = a0 + a1*T;
-    h = a0*T + a1/2*T^2; % integration of cp
     rho = 981 - 0.7547*(T-273.15 - 20);  %rho0 from datasheet, slope from other POE data
     mu = exp(-14.48 + 3439./T); % Andrate equation fitted on Emkarate brochure
     k = NaN;
+    h = a0*T + a1/2*T^2 ; % + in2/rhointegration of cp
     
 %elseif strcmp(fluid, 'OilLub')
     %cp= max(1e-10,1701.03390+4.34455206e-3*(T-273.15));

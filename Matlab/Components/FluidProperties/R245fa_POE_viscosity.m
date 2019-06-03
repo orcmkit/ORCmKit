@@ -18,11 +18,11 @@ if T_K >= Tbubble_min_K % The temperature is sufficiently high to permit a vapou
 else  % The temperature is too low and there is only a liquid phase
     zeta_oil = C_oil;
     if T_K >= Tsat_pure_K-1e-2
-        mu_rl= CoolProp.PropsSI('D', 'T', T_K, 'Q', 0, fluid_r);
+        mu_rl= CoolProp.PropsSI('V', 'T', T_K, 'Q', 0, fluid_r);
     else
-        mu_rl = CoolProp.PropsSI('D', 'T', T_K, 'P', P_Pa, fluid_r);
+        mu_rl = CoolProp.PropsSI('V', 'T', T_K, 'P', P_Pa, fluid_r);
     end
-    mu_vap = 0;
+    mu_vap = CoolProp.PropsSI('V', 'T', T_K, 'Q', 1, fluid_r); %0;
     mu_oil = PropsSI_ICP('V', 'T',T_K, 'P', P_Pa, fluid_lub);
     mu_liq = rho_liq*exp(zeta_oil*log(mu_oil/rho_oil) + zeta_r*log(mu_rl/rho_rl)); % Schroeder equaition (from M Conde)
     

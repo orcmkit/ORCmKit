@@ -104,7 +104,7 @@ if strcmp(info.type_h,'H') && strcmp(info.type_c,'H') % CASE 1 : HOT FLUID AND C
                 Q_dot_int_max = m_dot_h*(h_h_su-out_ext_max.H_h_vec(i_ext_max_rev(k))) + m_dot_c*(CoolProp.PropsSI('H', 'P', P_c_su, 'T', out_ext_max.T_h_vec(i_ext_max_rev(k)), fluid_c)-h_c_su);
             else
                 f = @(x) pinch0(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, x, info);
-                Q_dot_int_max = zeroBrent ( 0, Q_dot_ext_max, 1e-6, 1e-6, f );
+                Q_dot_int_max = zeroBrent ( 0, Q_dot_ext_max, 1e-6, 1e-6, f, 1e-6 );
             end
             out_int_max = HEX_profile(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_int_max, info);
             if out_int_max.pinch < -res_T
@@ -205,7 +205,7 @@ elseif strcmp(info.type_h,'T') && strcmp(info.type_c,'H')
         end
         if k > length(i_ext_max_rev)
             f = @(x) pinch0(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, x, info);
-            Q_dot_int_max = zeroBrent ( 0, Q_dot_ext_max, 1e-3, 1e-3, f );
+            Q_dot_int_max = zeroBrent ( 0, Q_dot_ext_max, 1e-3, 1e-3, f, 1e-6 );
         end
         Q_dot_max = Q_dot_int_max ;
     else

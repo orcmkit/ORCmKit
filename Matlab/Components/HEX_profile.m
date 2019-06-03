@@ -178,7 +178,7 @@ elseif strcmp(param.type_h,'T') && strcmp(param.type_c,'H') %% CASE 2 : HOT FLUI
     f_T_h_ex = @(x) Thex_def(x, T_h_su,  P_h_su, m_dot_h, Q_dot, fluid_h);
     lb =  CoolProp.PropsSI('T','P',P_c_su,'H',h_c_su, fluid_c);
     ub = T_h_su;
-    T_h_ex = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_h_ex );
+    T_h_ex = zeroBrent ( lb, ub, 1e-6, 1e-6, f_T_h_ex, 1e-6);
     cp_h = sf_PropsSI_bar('C', T_h_su, T_h_ex, P_h_su, fluid_h);
     Q_dot_vec = NaN*ones(1,length(H_c_vec)-1);
     T_h_vec = NaN*ones(1,length(H_c_vec)-1);

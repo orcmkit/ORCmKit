@@ -47,19 +47,19 @@ if nargin == 2
     % are given
     param.color_ctf = 'b';
     param.LineStyle_ctf = '--';
-    param.LineWidth_ctf = 1;
+    param.LineWidth_ctf = 1.2;
     param.MarkerType_ctf = 'o';
     param.alpha_ctf = 1;
     param.MarkerSize_ctf = 5;
     param.color_htf = 'r';
     param.LineStyle_htf = '--';
-    param.LineWidth_htf = 1;
+    param.LineWidth_htf = 1.2;
     param.MarkerType_htf = 'o';
     param.alpha_htf = 1;
     param.MarkerSize_htf = 5;
     param.color_orc = 'k';
     param.LineStyle_orc = '-';
-    param.LineWidth_orc = 1;
+    param.LineWidth_orc = 1.2;
     param.MarkerType_orc = 'o';
     param.alpha_orc = 1;
     param.MarkerSize_orc = 5;
@@ -68,67 +68,67 @@ end
 
 hold on
 load(['TS_prop_',fluid , '.mat'])
-plot(s_TS_curve, T_TS_curve-273.15, 'k', 'linewidth', param.LineWidth_orc+0.5)
+plot(s_TS_curve, T_TS_curve-273.15, 'linewidth', param.LineWidth_orc+0.5, 'color', 0.7*[ 1 1 1])
 %plot(s_TS_curve, T_TS_curve-273.15, 'color', param.color_ts, 'linewidth', param.LineWidth_orc-0.5)
 
 % Cold heat transfer fluid lines 
 if isfield(TS, 'CD')
     line_ctf =patchline(TS.CD.s_h, TS.CD.T_c-273.15, 'edgecolor',param.color_ctf, 'linestyle',param.LineStyle_ctf, 'linewidth',param.LineWidth_ctf,'edgealpha',param.alpha_ctf);
-    patchline([TS.CD.s_h(1) TS.CD.s_h(end)], [TS.CD.T_c(1) TS.CD.T_c(end)]-273.15, 'edgecolor',param.color_ctf, 'linestyle','none', 'Marker', param.MarkerType_ctf,'edgealpha',param.alpha_ctf, 'MarkerSize', param.MarkerSize_ctf);
+    patchline([TS.CD.s_h(1) TS.CD.s_h(end)], [TS.CD.T_c(1) TS.CD.T_c(end)]-273.15, 'edgecolor',param.color_ctf, 'linestyle','none', 'Marker', param.MarkerType_ctf,'edgealpha',param.alpha_ctf, 'MarkerSize', param.MarkerSize_ctf, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'SUB')
     line_ctf = patchline(TS.SUB.s_h, TS.SUB.T_c-273.15, 'edgecolor',param.color_ctf, 'linestyle',param.LineStyle_ctf, 'linewidth',param.LineWidth_ctf,'edgealpha',param.alpha_ctf);
-    patchline([TS.SUB.s_h(1) TS.SUB.s_h(end)], [TS.SUB.T_c(1) TS.SUB.T_c(end)]-273.15, 'edgecolor',param.color_ctf, 'linestyle','none', 'Marker', param.MarkerType_ctf,'edgealpha',param.alpha_ctf, 'MarkerSize', param.MarkerSize_ctf);
+    patchline([TS.SUB.s_h(1) TS.SUB.s_h(end)], [TS.SUB.T_c(1) TS.SUB.T_c(end)]-273.15, 'edgecolor',param.color_ctf, 'linestyle','none', 'Marker', param.MarkerType_ctf,'edgealpha',param.alpha_ctf, 'MarkerSize', param.MarkerSize_ctf, 'MarkerFaceColor', 'w');
 end
 
 % Hot heat transfer fluid lines 
 if isfield(TS, 'PRE')
     line_htf = patchline(TS.PRE.s_c, TS.PRE.T_h-273.15, 'edgecolor',param.color_htf, 'linestyle',param.LineStyle_htf, 'linewidth',param.LineWidth_htf,'edgealpha',param.alpha_htf);
-    patchline([TS.PRE.s_c(1) TS.PRE.s_c(end)], [TS.PRE.T_h(1) TS.PRE.T_h(end)]-273.15, 'edgecolor',param.color_htf, 'linestyle','none', 'Marker', param.MarkerType_htf,'edgealpha',param.alpha_htf, 'MarkerSize', param.MarkerSize_htf);
+    patchline([TS.PRE.s_c(1) TS.PRE.s_c(end)], [TS.PRE.T_h(1) TS.PRE.T_h(end)]-273.15, 'edgecolor',param.color_htf, 'linestyle','none', 'Marker', param.MarkerType_htf,'edgealpha',param.alpha_htf, 'MarkerSize', param.MarkerSize_htf, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'EV')
     line_htf = patchline(TS.EV.s_c, TS.EV.T_h-273.15, 'edgecolor',param.color_htf, 'linestyle',param.LineStyle_htf, 'linewidth',param.LineWidth_htf,'edgealpha',param.alpha_htf);
-    patchline([TS.EV.s_c(1) TS.EV.s_c(end)], [TS.EV.T_h(1) TS.EV.T_h(end)]-273.15, 'edgecolor',param.color_htf, 'linestyle','none', 'Marker', param.MarkerType_htf,'edgealpha',param.alpha_htf, 'MarkerSize', param.MarkerSize_htf);
+    patchline([TS.EV.s_c(1) TS.EV.s_c(end)], [TS.EV.T_h(1) TS.EV.T_h(end)]-273.15, 'edgecolor',param.color_htf, 'linestyle','none', 'Marker', param.MarkerType_htf,'edgealpha',param.alpha_htf, 'MarkerSize', param.MarkerSize_htf, 'MarkerFaceColor', 'w');
 end
 
 % ORC lines
 line_orc = patchline(TS.cycle.s, TS.cycle.T-273.15, 'edgecolor',param.color_orc, 'linestyle',param.LineStyle_orc, 'linewidth',param.LineWidth_orc,'edgealpha',param.alpha_orc);
 if isfield(TS, 'PP')
-    patchline([TS.PP.s(1) TS.PP.s(end)], [TS.PP.T(1) TS.PP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.PP.s(1) TS.PP.s(end)], [TS.PP.T(1) TS.PP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'REC')
-    patchline([TS.REC.s_c(1) TS.REC.s_c(end)], [TS.REC.T_c(1) TS.REC.T_c(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.REC.s_c(1) TS.REC.s_c(end)], [TS.REC.T_c(1) TS.REC.T_c(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'PRE')
-    patchline([TS.PRE.s_c(1) TS.PRE.s_c(end)], [TS.PRE.T_c(1) TS.PRE.T_c(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.PRE.s_c(1) TS.PRE.s_c(end)], [TS.PRE.T_c(1) TS.PRE.T_c(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'EV')
-    patchline([TS.EV.s_c(1) TS.EV.s_c(end)], [TS.EV.T_c(1) TS.EV.T_c(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.EV.s_c(1) TS.EV.s_c(end)], [TS.EV.T_c(1) TS.EV.T_c(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'LossesHP')
-    patchline([TS.LossesHP.s(1) TS.LossesHP.s(end)], [TS.LossesHP.T(1) TS.LossesHP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.LossesHP.s(1) TS.LossesHP.s(end)], [TS.LossesHP.T(1) TS.LossesHP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'EXP')
-    patchline([TS.EXP.s(1) TS.EXP.s(end)], [TS.EXP.T(1) TS.EXP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.EXP.s(1) TS.EXP.s(end)], [TS.EXP.T(1) TS.EXP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'REC')
     if isfield(TS.REC, 's_h')
-        patchline([TS.REC.s_h(1) TS.REC.s_h(end)], [TS.REC.T_h(1) TS.REC.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+        patchline([TS.REC.s_h(1) TS.REC.s_h(end)], [TS.REC.T_h(1) TS.REC.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
     elseif isfield(TS.REC, 's_H')
-        patchline([TS.REC.s_H(1) TS.REC.s_H(end)], [TS.REC.T_h(1) TS.REC.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+        patchline([TS.REC.s_H(1) TS.REC.s_H(end)], [TS.REC.T_h(1) TS.REC.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
     end
 end
 if isfield(TS, 'CD')
-    patchline([TS.CD.s_h(1) TS.CD.s_h(end)], [TS.CD.T_h(1) TS.CD.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.CD.s_h(1) TS.CD.s_h(end)], [TS.CD.T_h(1) TS.CD.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'SUB')
-    patchline([TS.SUB.s_h(1) TS.SUB.s_h(end)], [TS.SUB.T_h(1) TS.SUB.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.SUB.s_h(1) TS.SUB.s_h(end)], [TS.SUB.T_h(1) TS.SUB.T_h(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'LossesLP')
-    patchline([TS.LossesLP.s(1) TS.LossesLP.s(end)], [TS.LossesLP.T(1) TS.LossesLP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.LossesLP.s(1) TS.LossesLP.s(end)], [TS.LossesLP.T(1) TS.LossesLP.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 if isfield(TS, 'LR')
-    patchline([TS.LR.s(1) TS.LR.s(end)], [TS.LR.T(1) TS.LR.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc);
+    patchline([TS.LR.s(1) TS.LR.s(end)], [TS.LR.T(1) TS.LR.T(end)]-273.15, 'edgecolor',param.color_orc, 'linestyle','none', 'Marker', param.MarkerType_orc,'edgealpha',param.alpha_orc, 'MarkerSize', param.MarkerSize_orc, 'MarkerFaceColor', 'w');
 end
 
 hold off

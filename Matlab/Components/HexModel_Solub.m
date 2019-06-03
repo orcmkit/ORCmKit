@@ -185,6 +185,20 @@ tstart_hex = tic;
 %% HEAT EXCHANGER MODELLING
 param.H.G = m_dot_h/param.H.CS/param.H.n_canals;
 param.C.G = m_dot_c/param.C.CS/param.C.n_canals;
+if param.C.solub
+    if param.C.C_oil < 1e-4
+        param.C.x_lim_vap = 0.999;
+    else
+        param.C.x_lim_vap = 0.98;
+    end
+end
+if param.H.solub
+    if param.H.C_oil < 1e-4
+        param.H.x_lim_vap = 0.999;
+    else
+        param.H.x_lim_vap = 0.98;
+    end
+end
 
 % Evaluation of the hot fluid (HF) supply conditions
 [h_h_l, h_h_v, T_h_su] = supply_conditions_HEX_Solub(in_h_su, P_h_su, fluid_h, param.H);
@@ -208,7 +222,7 @@ if (T_h_su-T_c_su)>1e-2  && m_dot_h  > 0 && m_dot_c > 0; % Check if the operatin
     if isfield(param, 'Q_dot_max')
         Q_dot_max = param.Q_dot_max;
         out_max = HEX_profile_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, Q_dot_max, param, h_h_l, h_h_v, h_c_l, h_c_v);
-        pinch_Qdot_max = out_max.pinch;
+        pinch_Qdot_max = out_max.pinch
     else
         [Q_dot_max, pinch_Qdot_max] = HEX_Qdotmax_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, param, h_h_l, h_h_v, h_c_l, h_c_v); % compute maximal heat transfer
     end

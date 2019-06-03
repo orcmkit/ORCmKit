@@ -66,8 +66,8 @@ if strcmp(info.H.type,'H') && strcmp(info.C.type,'H') % CASE 1 : HOT FLUID AND C
     ub = min(Q_dot_cext_max, Q_dot_hext_max)*1.01;
     lb = 0;
     f = @(x) pinch0_Solub(fluid_h, m_dot_h, P_h_su, in_h_su, fluid_c, m_dot_c, P_c_su, in_c_su, x, info, h_h_l, h_h_v, h_c_l, h_c_v);
-    Q_dot_max = zeroBrent ( lb, ub, 1e-6, 1e-6, f );
-    pinch_min = f(Q_dot_max);
+    [Q_dot_max, pinch_min ]= zeroBrent ( lb, ub, 1e-16, 1e-14, f, 1e-8);
+
 end
 
 end

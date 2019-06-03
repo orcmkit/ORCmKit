@@ -1,4 +1,4 @@
-function h_boiling = Amalfi_Boiling_BPHEX_HTC(x, rho_l, rho_v, rho, mu_v, mu_l, k_l, sigma, i_fg, G, Dh, theta, Qdot, DTlog, h_conv_h)
+function [h_boiling, Nu_boiling, flag] = Amalfi_Boiling_BPHEX_HTC(x, rho_l, rho_v, rho, mu_v, mu_l, k_l, sigma, i_fg, G, Dh, theta, Qdot, DTlog, h_conv_h, disp_flag) %---> VERIFIED
 
 % Boiling HTC correlation published by Amalfi in "Flow boiling and
 % frictional pressure gradients in plate heat exchangers. Part 2:
@@ -8,6 +8,7 @@ function h_boiling = Amalfi_Boiling_BPHEX_HTC(x, rho_l, rho_v, rho, mu_v, mu_l, 
 % RDickes - 26/04/2017
 
 % QUEL VALEUR DE K PRENDRE ???? CE SERAIT DU LIQUID?!
+flag = 1;
 
 g = 9.81; 
 Bd = (rho_l-rho_v)*g*Dh^2/sigma; 
@@ -25,9 +26,12 @@ if Bd < 4 % Micro-scale flow mechanism
     f_Bo = @(xx) res_iter_AmalfiMicro_boiling(xx, beta_star, We, rho_star, h_conv_h, k_l, Dh, AU_tp, Qdot, G, i_fg);
     opts = optimoptions('fsolve', 'display', 'none');
     [Bo,err_Bo] = fsolve(f_Bo, Bo_0, opts);
-    [~, ~, h, ~, ~, ~, ~] = iter_AmalfiMicro_boiling(Bo, beta_star, We, rho_star, h_conv_h, k_l, Dh, AU_tp, Qdot, G, i_fg);
-    if err_Bo > 1e-5
-        display(['Amalfi boiling: Wrong boiling number --> err_Bo = ' num2str(err_Bo) ' !!!'])
+    [~, Nu_boiling, h, ~, ~, q, ~] = iter_AmalfiMicro_boiling(Bo, beta_star, We, rho_star, h_conv_h, k_l, Dh, AU_tp, Qdot, G, i_fg);
+    if disp_flag        
+        if err_Bo > 1e-5
+            flag = - 5;
+            display(['Amalfi boiling: Wrong boiling number --> err_Bo = ' num2str(err_Bo) ' !!!'])
+        end
     end
     h_boiling = h;
     
@@ -37,14 +41,18 @@ else % Macro-scale flow mechanism
     f_Bo = @(xx) res_iter_AmalfiMacro_boiling(xx, beta_star, Re_v, Re_lo, Bd, rho_star, k_l, Dh, h_conv_h, AU_tp, Qdot, G, i_fg);
     opts = optimoptions('fsolve', 'display', 'none');
     [Bo,err_Bo] = fsolve(f_Bo, Bo_0, opts);
-    [~, ~, h, ~, ~, ~, ~] = iter_AmalfiMacro_boiling(Bo, beta_star, Re_v, Re_lo, Bd, rho_star, k_l, Dh, h_conv_h, AU_tp, Qdot, G, i_fg);
-    if err_Bo > 1e-5
-        display(['Amalfi boiling: Wrong boiling number --> err_Bo = ' num2str(err_Bo) ' !!!'])
+    [~, Nu_boiling, h, ~, ~, q, ~] = iter_AmalfiMacro_boiling(Bo, beta_star, Re_v, Re_lo, Bd, rho_star, k_l, Dh, h_conv_h, AU_tp, Qdot, G, i_fg);
+    if disp_flag
+        if err_Bo > 1e-5
+            flag = - 5;
+            display(['Amalfi boiling: Wrong boiling number --> err_Bo = ' num2str(err_Bo) ' !!!'])
+        end
     end
     h_boiling = h;
    
     
 end
+
 end
 
 function res_Bo = res_iter_AmalfiMicro_boiling(Bo_g, beta_star, We, rho_star, h_conv_h, k_l, Dh, AU_tp, Qdot, G, i_fg)

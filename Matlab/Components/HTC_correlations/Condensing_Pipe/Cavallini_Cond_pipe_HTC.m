@@ -4,7 +4,7 @@ function [h_cond, Nu, flag ]  = Cavallini_Cond_pipe_HTC(x, mu_l, mu_v, rho_l, rh
 % Heat Exchanger Design", Heat Transfer Engineering, 2006
 
 % RDickes - 25/07/2018
-    x = max(x, 1e-6);
+    x = min(0.999999,max(x, 1e-6));
     g = 9.81;
     C_T = 2.6; %1.6 for HC or 2.6 for other refrigerant
     X_tt = ((mu_l/mu_v)^0.1)*((rho_v/rho_l)^0.5)*((1-x)/x)^0.9; %LM factor

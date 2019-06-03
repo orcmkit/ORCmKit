@@ -8,6 +8,9 @@ out.zeta_oil = 1-out.zeta_r;
 out.res_zeta_r = 0;
 [out.rho_vap, out.rho_rl, out.rho_oil, out.rho_liq, out.K] = R245fa_POE_density(T_K, P_Pa, out.zeta_r, fluid_r, fluid_lub, fit_ratio_rho, out.Tbubble_min, out.Tsat_pure);
 [out.mu_vap, out.mu_rl, out.mu_oil, out.mu_liq] = R245fa_POE_viscosity(T_K, P_Pa, C_oil, out.zeta_r, out.rho_liq, out.rho_oil, out.rho_rl, fluid_r, fluid_lub, out.Tbubble_min, out.Tsat_pure);
+param.mu_v = out.mu_vap;
+param.mu_l = out.mu_liq;
+param.sig = CoolProp.PropsSI('I', 'P', P_Pa, 'Q', 0, fluid_r);
 
 
 if out.C_rv > 0 %there is a vapour phase
